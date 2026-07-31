@@ -1,0 +1,42 @@
+{
+  "manifest_version": 3,
+  "name": "秋招助手 - Boss直聘采集",
+  "description": "一键抓取 Boss 直聘岗位 JD，导入秋招助手（零成本本地工具）",
+  "version": "1.2.0",
+  "permissions": ["activeTab", "clipboardWrite", "storage", "scripting"],
+  "host_permissions": [
+    "https://www.zhipin.com/*",
+    "https://zhipin.com/*",
+    "http://localhost/*",
+    "http://127.0.0.1/*",
+    "https://*.github.io/*",
+    "https://*.vercel.app/*",
+    "https://*.netlify.app/*"
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "导入到秋招助手"
+  },
+  "options_page": "options.html",
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://www.zhipin.com/*", "https://zhipin.com/*"],
+      "js": ["scrape-boss.js"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "http://localhost/*",
+        "http://127.0.0.1/*",
+        "https://*.github.io/*",
+        "https://*.vercel.app/*",
+        "https://*.netlify.app/*"
+      ],
+      "js": ["content-app-bridge.js"],
+      "run_at": "document_idle"
+    }
+  ]
+}

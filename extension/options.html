@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <title>秋招助手插件设置</title>
+    <style>
+      body {
+        font-family: system-ui, sans-serif;
+        max-width: 480px;
+        margin: 40px auto;
+        padding: 0 16px;
+      }
+      label {
+        display: block;
+        margin-bottom: 16px;
+      }
+      input {
+        width: 100%;
+        padding: 8px;
+        margin-top: 4px;
+      }
+      button {
+        padding: 10px 16px;
+        background: #2563eb;
+        color: #fff;
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>秋招助手插件设置</h1>
+    <label>
+      秋招助手地址
+      <input id="appUrl" placeholder="http://localhost:5173" />
+    </label>
+    <p>本地开发默认 <code>http://localhost:5173</code>，GitHub Pages 填你的 Pages 地址。</p>
+    <button id="save">保存</button>
+    <p id="msg"></p>
+    <script src="options.js"></script>
+  </body>
+</html>
