@@ -1,5 +1,6 @@
 import type { JdAnalysis } from '../types'
 import { filterHardSkills, filterJobDescTags } from './jdFilters'
+import { dedupeAcrossSections, dedupeBullets } from './jdDedupe'
 import { type RequirementParts } from './jdParser'
 import {
   extractSkillsFromSection,
@@ -19,30 +20,6 @@ function summarizeCompany(intro: string): string {
   if (!intro.trim()) return ''
   const oneLine = intro.replace(/\s+/g, ' ').slice(0, 120)
   return oneLine.length < intro.length ? `${oneLine}…` : oneLine
-}
-
-function normalizeForDedupe(s: string): string {
-  return s
-    .replace(/\s+/g, '')
-    .replace(/^【[^】]+】/, '')
-    .replace(/^经验[：:\s]*/, '')
-    .trim()
-}
-
-function dedupeBullets(items: string[]): string[] {
-  const out: string[] = []
-  for (const item of items) {
-    const cleaned = item.trim().replace(/^[-·•*\d.、)）\s]+/, '')
-    if (cleaned.length < 4) continue
-    const norm = normalizeForDedupe(cleaned)
-    if (!norm) continue
-    const isDup = out.some((existing) => {
-      const en = normalizeForDedupe(existing)
-      return en === norm || en.includes(norm) || norm.includes(en)
-    })
-    if (!isDup) out.push(cleaned)
-  }
-  return out
 }
 
 /** 按分号/换行拆句（Boss「经验」段常为一整段用；分隔） */
@@ -105,37 +82,37 @@ export function analyzeJDByRules(jdRaw: string, options: AnalyzeOptions = {}): J
       options.responsibilityItems
     : structured.responsibilityItems
 
-  const education = dedupeBullets(bulletFromBlock(parts.education))
-  const experience = dedupeBullets(bulletFromBlock(parts.experience))
-  const projectRequirements = extractProjectLines(parts.experience)
-  const softSkills = dedupeBullets(splitSoftSkillItems(parts.softSkills))
-  const hardSkills = filterHardSkills(
-    extractSkillsFromSection(parts.skills, filterJobDescTags(options.skillTags ?? [])),
+  const hasStructuredParts = Boolean(
+    parts.education || parts.skills || parts.softSkills || parts.experience,
   )
 
-  const requirementsSummary = [
-    parts.education && `【学历与专业】${parts.education.replace(/\n/g, ' ').slice(0, 160)}`,
-    parts.skills && `【技能】${parts.skills.replace(/\n/g, ' ').slice(0, 160)}`,
-    parts.softSkills && `【软性素质】${parts.softSkills.replace(/\n/g, ' ').slice(0, 120)}`,
-    parts.experience && `【经验】${parts.experience.replace(/\n/g, ' ').slice(0, 160)}`,
-  ].filter(Boolean) as string[]
-
-  return {
-    education,
-    experience,
-    hardSkills,
-    softSkills,
-    projectRequirements,
+  const merged = dedupeAcrossSections({
+    education: dedupeBullets(bulletFromBlock(parts.education)),
+    projectRequirements: extractProjectLines(parts.experience),
+    experience: dedupeBullets(bulletFromBlock(parts.experience)),
+    softSkills: dedupeBullets(splitSoftSkillItems(parts.softSkills)),
+    hardSkills: filterHardSkills(
+      extractSkillsFromSection(parts.skills, filterJobDescTags(options.skillTags ?? [])),
+    ),
     responsibilities: dedupeBullets(
       responsibilityItems.length ?
         responsibilityItems
       : bulletFromBlock(structured.responsibilities),
     ),
-    requirements: dedupeBullets(
-      requirementsSummary.length ?
-        requirementsSummary
-      : bulletFromBlock(structured.requirements),
-    ),
+    requirements:
+      hasStructuredParts ?
+        []
+      : dedupeBullets(bulletFromBlock(structured.requirements)),
+  })
+
+  return {
+    education: merged.education ?? [],
+    experience: merged.experience ?? [],
+    hardSkills: merged.hardSkills ?? [],
+    softSkills: merged.softSkills ?? [],
+    projectRequirements: merged.projectRequirements ?? [],
+    responsibilities: merged.responsibilities ?? [],
+    requirements: merged.requirements ?? [],
     companySummary: summarizeCompany(structured.companyIntro),
     analyzedAt: new Date().toISOString(),
     source: 'rules',

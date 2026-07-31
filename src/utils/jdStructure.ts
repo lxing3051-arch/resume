@@ -4,6 +4,7 @@ import {
   isEmployeeBenefit,
   looksLikeTechnicalSkill,
 } from './jdFilters'
+import { dedupeBullets } from './jdDedupe'
 export interface RequirementParts {
   education: string
   skills: string
@@ -117,7 +118,7 @@ export function splitNumberedBlocks(text: string, maxItems = 8): string[] {
     if (body.length >= 4 && body.length < 500) items.push(body)
   }
 
-  return items.slice(0, maxItems)
+  return dedupeBullets(items).slice(0, maxItems)
 }
 
 /** 解析任职要求内的 1.学历 2.技能 3.软性 4.经验 */
@@ -138,15 +139,22 @@ export function parseRequirementParts(reqBlock: string): RequirementParts {
 
   for (const chunk of numbered) {
     const titleLine = chunk.trim().split('\n')[0] ?? ''
-    const body = chunk
+    let body = chunk
       .trim()
       .replace(/^[^\n]+\n?/, '')
       .trim()
 
     const titleClean = titleLine.replace(/^\d+[.、．)\s]+/, '').trim()
+    const inline = titleLine.match(/^\d+[.、．)\s]+[^：:\n]+[：:\s]+(.+)$/)
+    if (!body && inline?.[1]) body = inline[1].trim()
+
     for (const def of REQ_SUB_HEADERS) {
       if (def.patterns.some((p) => p.test(titleClean))) {
-        parts[def.key] = (parts[def.key] ? `${parts[def.key]}\n` : '') + (body || titleClean)
+        const piece = body || titleClean
+        if (!piece) break
+        const existing = parts[def.key]
+        if (existing && isDuplicatePart(existing, piece)) break
+        parts[def.key] = existing ? `${existing}\n${piece}` : piece
         break
       }
     }
@@ -194,6 +202,12 @@ function grabLabeledSection(text: string, labelRe: RegExp): string {
   }
 
   return buf.join('\n').trim()
+}
+
+function isDuplicatePart(a: string, b: string): boolean {
+  const na = a.replace(/\s+/g, '').toLowerCase()
+  const nb = b.replace(/\s+/g, '').toLowerCase()
+  return na === nb || na.includes(nb) || nb.includes(na)
 }
 
 const TOOL_SPLIT = /[、,，/／|｜\s]+/
@@ -247,11 +261,12 @@ function normalizeSkillToken(raw: string): string {
 /** 软性素质：按行或「标题：说明」拆分 */
 export function splitSoftSkillItems(softBlock: string): string[] {
   if (!softBlock.trim()) return []
-  return softBlock
-    .split(/\n/)
-    .map((l) => l.trim().replace(/^[-·•*\d.、)）\s]+/, ''))
-    .filter((l) => l.length >= 6 && l.length < 200)
-    .slice(0, 8)
+  return dedupeBullets(
+    softBlock
+      .split(/\n/)
+      .map((l) => l.trim().replace(/^[-·•*\d.、)）\s]+/, ''))
+      .filter((l) => l.length >= 6 && l.length < 200),
+  ).slice(0, 8)
 }
 
 export function parseStructuredJD(text: string, pageTags: string[] = []): StructuredJD {
