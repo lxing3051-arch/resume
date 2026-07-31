@@ -1,6 +1,11 @@
 import type { JdAnalysis } from '../types'
 import { filterHardSkills, filterJobDescTags } from './jdFilters'
-import { dedupeAcrossSections, dedupeBullets } from './jdDedupe'
+import {
+  dedupeAcrossSections,
+  dedupeBullets,
+  isProjectRequirementLine,
+  stripTaggedSummaries,
+} from './jdDedupe'
 import { type RequirementParts } from './jdParser'
 import {
   extractSkillsFromSection,
@@ -51,16 +56,15 @@ function bulletFromBlock(text: string): string[] {
   return dedupeBullets(lines.length ? lines : [text.trim()]).slice(0, 8)
 }
 
-function extractProjectLines(experienceBlock: string): string[] {
-  if (!experienceBlock.trim()) return []
-  const sentences = splitSentences(experienceBlock)
-  const candidates =
-    sentences.length >= 2 ? sentences : bulletFromBlock(experienceBlock)
-  return dedupeBullets(
-    candidates.filter((l) =>
-      /项目|作品|建模|RAG|AutoML|GitHub|竞赛|实习产出|课程项目|Agent|知识库/.test(l),
-    ),
-  )
+/** 经验段拆成：一般实习经验 vs 项目/作品要求（互斥） */
+function splitExperienceBlock(experienceBlock: string): {
+  experience: string[]
+  projectRequirements: string[]
+} {
+  const all = dedupeBullets(bulletFromBlock(experienceBlock))
+  const projectRequirements = all.filter(isProjectRequirementLine)
+  const experience = all.filter((l) => !isProjectRequirementLine(l))
+  return { experience, projectRequirements }
 }
 
 /** 纯规则分类：按 Boss 段落结构拆栏，各栏互不重复 */
@@ -82,14 +86,20 @@ export function analyzeJDByRules(jdRaw: string, options: AnalyzeOptions = {}): J
       options.responsibilityItems
     : structured.responsibilityItems
 
-  const hasStructuredParts = Boolean(
-    parts.education || parts.skills || parts.softSkills || parts.experience,
+  const { experience, projectRequirements } = splitExperienceBlock(parts.experience)
+
+  const hasStructuredGrid = Boolean(
+    parts.education ||
+      parts.skills ||
+      parts.softSkills ||
+      parts.experience ||
+      responsibilityItems.length,
   )
 
   const merged = dedupeAcrossSections({
     education: dedupeBullets(bulletFromBlock(parts.education)),
-    projectRequirements: extractProjectLines(parts.experience),
-    experience: dedupeBullets(bulletFromBlock(parts.experience)),
+    projectRequirements,
+    experience,
     softSkills: dedupeBullets(splitSoftSkillItems(parts.softSkills)),
     hardSkills: filterHardSkills(
       extractSkillsFromSection(parts.skills, filterJobDescTags(options.skillTags ?? [])),
@@ -100,9 +110,9 @@ export function analyzeJDByRules(jdRaw: string, options: AnalyzeOptions = {}): J
       : bulletFromBlock(structured.responsibilities),
     ),
     requirements:
-      hasStructuredParts ?
+      hasStructuredGrid ?
         []
-      : dedupeBullets(bulletFromBlock(structured.requirements)),
+      : stripTaggedSummaries(dedupeBullets(bulletFromBlock(structured.requirements))),
   })
 
   return {

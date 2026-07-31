@@ -33,6 +33,30 @@ export function dedupeBullets(items: string[]): string[] {
   return out
 }
 
+/** 是否属于「项目/作品」类要求（区别于一般实习经验） */
+export function isProjectRequirementLine(line: string): boolean {
+  const t = line.trim()
+  if (!t) return false
+  // 一般实习/工作年限 → 经验栏，不是项目栏
+  if (/实习经验|工作经历|从业经验|年以上/.test(t) && !/项目作品|课程项目|建模项目/.test(t)) {
+    return false
+  }
+  if (/项目作品|完整.*项目|课程项目|竞赛|实习产出|GitHub|附上简要说明|建模项目|数据分析项目/.test(t)) {
+    return true
+  }
+  if (/RAG|AutoML|Agent|知识库/.test(t) && /项目|实践/.test(t)) return true
+  return false
+}
+
+/** 是否为旧版「【学历】摘要」格式，不应再展示 */
+export function isTaggedSummaryLine(line: string): boolean {
+  return /^【[^】]+】/.test(line.trim())
+}
+
+export function stripTaggedSummaries(items: string[]): string[] {
+  return items.filter((l) => !isTaggedSummaryLine(l))
+}
+
 type SectionKey =
   | 'education'
   | 'projectRequirements'

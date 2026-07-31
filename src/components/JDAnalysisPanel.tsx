@@ -12,6 +12,8 @@ interface Props {
   companyId?: number
   onAnalysisChange?: (analysis: JdAnalysis) => void
   compact?: boolean
+  /** 详情页打开时用最新规则重算（修正旧缓存里的重复分类） */
+  autoRefresh?: boolean
 }
 
 function BulletList({ items }: { items: string[] }) {
@@ -63,6 +65,7 @@ export function JDAnalysisPanel({
   companyId,
   onAnalysisChange,
   compact = false,
+  autoRefresh = false,
 }: Props) {
   const [analysis, setAnalysis] = useState(initialAnalysis)
   const [classifying, setClassifying] = useState(false)
@@ -73,6 +76,12 @@ export function JDAnalysisPanel({
   useEffect(() => {
     setAnalysis(initialAnalysis)
   }, [initialAnalysis])
+
+  useEffect(() => {
+    if (!autoRefresh || !jdRaw.trim()) return
+    const next = analyzeJDByRules(jdRaw)
+    void persistAnalysis(next)
+  }, [autoRefresh, jdRaw, companyId])
 
   async function persistAnalysis(next: JdAnalysis) {
     setAnalysis(next)
@@ -157,34 +166,37 @@ export function JDAnalysisPanel({
           <div className="jd-primary-block">
             <h3 className="jd-block-title">职位要求（重点）</h3>
             <div className="jd-grid">
-              <JdSection title="学历与专业">
-                <BulletList items={display.education} />
-              </JdSection>
-              <JdSection title="经验要求">
-                <BulletList items={display.experience} />
-              </JdSection>
-              <JdSection title="硬技能 / 技术栈">
-                <TagList items={display.hardSkills} />
-              </JdSection>
-              <JdSection title="软性素质">
-                <BulletList items={display.softSkills} />
-              </JdSection>
-              <JdSection title="项目经历要求" highlight>
-                <BulletList items={display.projectRequirements} />
-              </JdSection>
+              {display.education.length > 0 && (
+                <JdSection title="学历与专业">
+                  <BulletList items={display.education} />
+                </JdSection>
+              )}
+              {display.experience.length > 0 && (
+                <JdSection title="经验要求">
+                  <BulletList items={display.experience} />
+                </JdSection>
+              )}
+              {display.hardSkills.length > 0 && (
+                <JdSection title="硬技能 / 技术栈">
+                  <TagList items={display.hardSkills} />
+                </JdSection>
+              )}
+              {display.softSkills.length > 0 && (
+                <JdSection title="软性素质">
+                  <BulletList items={display.softSkills} />
+                </JdSection>
+              )}
+              {display.projectRequirements.length > 0 && (
+                <JdSection title="项目经历要求" highlight>
+                  <BulletList items={display.projectRequirements} />
+                </JdSection>
+              )}
             </div>
-            {(display.responsibilities.length > 0 || display.requirements.length > 0) && (
+            {display.responsibilities.length > 0 && (
               <div className="jd-grid jd-grid-wide">
-                {display.responsibilities.length > 0 && (
-                  <JdSection title="岗位职责">
-                    <BulletList items={display.responsibilities} />
-                  </JdSection>
-                )}
-                {display.requirements.length > 0 && (
-                  <JdSection title="任职要求">
-                    <BulletList items={display.requirements} />
-                  </JdSection>
-                )}
+                <JdSection title="岗位职责">
+                  <BulletList items={display.responsibilities} />
+                </JdSection>
               </div>
             )}
             {display.analyzedAt && (

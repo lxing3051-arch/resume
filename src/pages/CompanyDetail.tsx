@@ -169,6 +169,7 @@ export default function CompanyDetail() {
           position={company.position}
           companyName={company.name}
           companyId={companyId}
+          autoRefresh
         />
       </section>
 
