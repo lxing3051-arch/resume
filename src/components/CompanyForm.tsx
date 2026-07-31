@@ -1,13 +1,9 @@
 import type { CompanyFormData } from '../utils/companyForm'
-import { initSkillRatings } from '../utils/companyForm'
 import { importFromClipboard } from '../utils/extensionBridge'
 import { analyzeJDByRules, mergeSkillsFromAnalysis } from '../utils/jdAnalyzer'
-import { analyzeJD } from '../utils/jdAnalysis'
 import { parseJDText } from '../utils/jdParser'
-import { parseJDEnhanced } from '../utils/jdAiParse'
 import { recognizeImage } from '../utils/ocr'
 import { JDAnalysisPanel } from './JDAnalysisPanel'
-import { SkillRatingEditor } from './SkillRatingEditor'
 import type { ResumeVersion, Season } from '../types'
 import { useEffect, useRef, useState } from 'react'
 
@@ -38,7 +34,6 @@ function applyParsed(
     requirements: parsed.requirements,
     responsibilities: parsed.responsibilities,
     skills: mergedSkills,
-    skillRatings: initSkillRatings(mergedSkills, form.skillRatings),
     jdAnalysis: analysis,
   }
 }
@@ -53,16 +48,12 @@ export function CompanyForm({
   submitting = false,
 }: Props) {
   const [ocrProgress, setOcrProgress] = useState<number | null>(null)
-  const [ollamaProgress, setOllamaProgress] = useState(false)
   const [importHint, setImportHint] = useState('')
   const formRef = useRef(form)
   formRef.current = form
   const parseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   function update(patch: Partial<CompanyFormData>) {
-    if (patch.skills) {
-      patch.skillRatings = initSkillRatings(patch.skills, form.skillRatings)
-    }
     onChange(patch)
   }
 
@@ -97,37 +88,6 @@ export function CompanyForm({
     }
   }, [form.jdRaw])
 
-  async function handleOllamaParse() {
-    if (!form.jdRaw.trim()) {
-      setImportHint('请先粘贴或导入 JD 文本')
-      return
-    }
-    setOllamaProgress(true)
-    setImportHint('')
-    try {
-      const parsed = await parseJDEnhanced(form.jdRaw)
-      const base = applyParsed(form, form.jdRaw, parsed)
-      let analysis = analyzeJDByRules(form.jdRaw)
-      try {
-        analysis = await analyzeJD(form.jdRaw)
-      } catch {
-        /* keep rule-based */
-      }
-      const skills = mergeSkillsFromAnalysis(analysis, base.skills ?? form.skills)
-      update({
-        ...base,
-        jdAnalysis: analysis,
-        skills,
-        skillRatings: initSkillRatings(skills, form.skillRatings),
-      })
-      setImportHint('AI 解析与分类完成')
-    } catch {
-      setImportHint('AI 不可用，请确认 Gemini API Key 或 Ollama 已配置')
-    } finally {
-      setOllamaProgress(false)
-    }
-  }
-
   async function handleClipboardImport() {
     try {
       const patch = await importFromClipboard(form)
@@ -150,14 +110,6 @@ export function CompanyForm({
           <div className="quick-actions">
             <button className="btn primary" type="button" onClick={() => void handleClipboardImport()}>
               从剪贴板导入（插件）
-            </button>
-            <button
-              className="btn ghost"
-              type="button"
-              disabled={ollamaProgress}
-              onClick={() => void handleOllamaParse()}
-            >
-              {ollamaProgress ? 'AI 解析中...' : 'AI 智能解析'}
             </button>
           </div>
           {importHint && <p className="hint">{importHint}</p>}
@@ -187,7 +139,7 @@ export function CompanyForm({
         </section>
       )}
 
-      <form className="panel" onSubmit={onSubmit}>
+      <form className="panel" onSubmit={onSubmit} noValidate>
         <h2>{showOcr ? '确认信息' : '编辑信息'}</h2>
         <div className="form-grid">
           <label className="field">
@@ -276,28 +228,20 @@ export function CompanyForm({
           </label>
         </div>
 
-        <SkillRatingEditor
-          skills={form.skills}
-          ratings={form.skillRatings}
-          onChange={(skillRatings) => update({ skillRatings })}
-        />
-
         {form.jdRaw.trim() && (
           <JDAnalysisPanel
             analysis={form.jdAnalysis}
-            resumeProjects={form.resumeProjects}
             jdRaw={form.jdRaw}
             position={form.position}
+            companyName={form.name}
             compact
             onAnalysisChange={(jdAnalysis) => {
               const skills = mergeSkillsFromAnalysis(jdAnalysis, form.skills)
               update({
                 jdAnalysis,
                 skills,
-                skillRatings: initSkillRatings(skills, form.skillRatings),
               })
             }}
-            onProjectsChange={(resumeProjects) => update({ resumeProjects })}
           />
         )}
 

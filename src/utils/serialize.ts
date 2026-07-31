@@ -14,7 +14,6 @@ export function formToCompanyPayload(
     deadline: form.deadline || undefined,
     jdRaw: form.jdRaw,
     skills: form.skills,
-    skillRatings: form.skillRatings,
     requirements: form.requirements || undefined,
     responsibilities: form.responsibilities || undefined,
     bossUrl: form.bossUrl || undefined,
@@ -72,4 +71,56 @@ export function exportToResume(stored: ResumeExport): import('../types').ResumeV
     ...rest,
     fileBlob: base64ToBlob(fileBase64, mimeType ?? 'application/pdf'),
   }
+}
+
+export interface ProjectFileExport {
+  id: string
+  fileName: string
+  fileSize?: number
+  mimeType?: string
+  uploadedAt: string
+  fileBase64?: string
+}
+
+export interface PortfolioProjectExport {
+  id?: number
+  title: string
+  description: string
+  techStack: string[]
+  highlights: string[]
+  repoUrl?: string
+  notes?: string
+  status: import('../types').ProjectStatus
+  files: ProjectFileExport[]
+  createdAt: string
+  updatedAt: string
+}
+
+export async function projectToExport(
+  project: import('../types').PortfolioProject,
+): Promise<PortfolioProjectExport> {
+  const files = await Promise.all(
+    project.files.map(async (f) => {
+      const { fileBlob, ...rest } = f
+      if (!fileBlob) return rest
+      return {
+        ...rest,
+        fileBase64: await blobToBase64(fileBlob),
+      }
+    }),
+  )
+  const { files: _omit, ...rest } = project
+  return { ...rest, files }
+}
+
+export function exportToProject(stored: PortfolioProjectExport): import('../types').PortfolioProject {
+  const files = stored.files.map((f) => {
+    const { fileBase64, mimeType, ...rest } = f
+    if (!fileBase64) return rest
+    return {
+      ...rest,
+      fileBlob: base64ToBlob(fileBase64, mimeType ?? 'application/octet-stream'),
+    }
+  })
+  return { ...stored, files }
 }

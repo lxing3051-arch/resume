@@ -5,7 +5,7 @@ import Dashboard from './pages/Dashboard'
 import CompanyNew from './pages/CompanyNew'
 import CompanyEdit from './pages/CompanyEdit'
 import CompanyDetail from './pages/CompanyDetail'
-import ProjectWorkshop from './pages/ProjectWorkshop'
+import Projects from './pages/Projects'
 import Calendar from './pages/Calendar'
 import Stats from './pages/Stats'
 import Resumes from './pages/Resumes'
@@ -21,10 +21,10 @@ function AppRoutes() {
       <Route path="/company/new" element={<CompanyNew />} />
       <Route path="/company/:id/edit" element={<CompanyEdit />} />
       <Route path="/company/:id" element={<CompanyDetail />} />
-      <Route path="/company/:id/project/:projectId" element={<ProjectWorkshop />} />
       <Route path="/calendar" element={<Calendar />} />
       <Route path="/stats" element={<Stats />} />
       <Route path="/resumes" element={<Resumes />} />
+      <Route path="/projects" element={<Projects />} />
       <Route path="/notes" element={<Notes />} />
       <Route path="/settings" element={<Settings />} />
     </Routes>

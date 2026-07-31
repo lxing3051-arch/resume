@@ -4,10 +4,11 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { Layout } from '../components/Layout'
 import { CompanyForm } from '../components/CompanyForm'
 import { createCompany } from '../utils/companyService'
-import { emptyCompanyForm, initSkillRatings } from '../utils/companyForm'
+import { emptyCompanyForm } from '../utils/companyForm'
 import {
-  consumePendingExtensionImport,
+  clearPendingExtensionImport,
   extensionPayloadToForm,
+  peekPendingExtensionImport,
   subscribeExtensionImport,
 } from '../utils/extensionBridge'
 import type { ExtensionImportPayload } from '../utils/extensionImport'
@@ -21,32 +22,36 @@ export default function CompanyNew() {
   const [extensionNotice, setExtensionNotice] = useState('')
   const [saveError, setSaveError] = useState('')
   const [saving, setSaving] = useState(false)
-  const appliedRef = useRef(false)
+  const formRef = useRef(form)
+  formRef.current = form
+
   const resumes = useLiveQuery(() => db.resumes.toArray())
 
-  useEffect(() => {
-    function apply(payload: ExtensionImportPayload) {
-      if (appliedRef.current && !payload.jdRaw) return
-      appliedRef.current = true
+  function applyImport(payload: ExtensionImportPayload) {
+    try {
       setForm((prev) => ({ ...prev, ...extensionPayloadToForm(payload, prev) }))
       setExtensionNotice('已从 Boss 插件导入，请确认信息后保存')
+      setSaveError('')
+      clearPendingExtensionImport()
+    } catch (err) {
+      console.error(err)
+      setSaveError('插件数据解析失败，请尝试「从剪贴板导入」')
     }
+  }
 
-    // 1. localStorage 兜底（插件 executeScript 写入）
-    const pending = consumePendingExtensionImport()
-    if (pending) apply(pending)
+  useEffect(() => {
+    const pending = peekPendingExtensionImport()
+    if (pending) applyImport(pending)
 
-    // 2. 实时事件 / postMessage
-    const unsub = subscribeExtensionImport(apply)
+    const unsub = subscribeExtensionImport(applyImport)
 
-    // 3. React 晚于插件注入时，短暂轮询 localStorage
     let tries = 0
     const poll = window.setInterval(() => {
       tries++
-      const p = consumePendingExtensionImport()
-      if (p) apply(p)
-      if (tries >= 30) window.clearInterval(poll)
-    }, 200)
+      const p = peekPendingExtensionImport()
+      if (p) applyImport(p)
+      if (tries >= 50) window.clearInterval(poll)
+    }, 300)
 
     return () => {
       unsub()
@@ -55,27 +60,42 @@ export default function CompanyNew() {
   }, [])
 
   function update(patch: Partial<typeof form>) {
-    setForm((prev) => {
-      const next = { ...prev, ...patch }
-      if (patch.skills) {
-        next.skillRatings = initSkillRatings(patch.skills, prev.skillRatings)
-      }
-      return next
-    })
+    setForm((prev) => ({ ...prev, ...patch }))
   }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (saving) return
+
+    const current = formRef.current
+    if (!current.name.trim()) {
+      setSaveError('请填写公司名称（插件未识别时可手动输入）')
+      return
+    }
+    if (!current.position.trim()) {
+      setSaveError('请填写岗位名称')
+      return
+    }
+
     setSaving(true)
     setSaveError('')
+    await new Promise<void>((resolve) => {
+      requestAnimationFrame(() => resolve())
+    })
+
     try {
       const jdAnalysis =
-        form.jdAnalysis ?? (form.jdRaw.trim() ? analyzeJDByRules(form.jdRaw) : undefined)
-      const id = await createCompany(formToCompanyPayload({ ...form, jdAnalysis }))
+        current.jdAnalysis ??
+        (current.jdRaw.trim() ? analyzeJDByRules(current.jdRaw) : undefined)
+      const id = await createCompany(formToCompanyPayload({ ...current, jdAnalysis }))
       navigate(`/company/${id}`)
-    } catch {
-      setSaveError('保存失败，请重试')
+    } catch (err) {
+      console.error(err)
+      const msg =
+        err instanceof Error && err.message.includes('IndexedDB') ?
+          '浏览器无法写入本地数据库，请关闭无痕模式或换 Chrome/Edge 重试'
+        : '保存失败，请重试'
+      setSaveError(msg)
     } finally {
       setSaving(false)
     }
@@ -86,9 +106,9 @@ export default function CompanyNew() {
       <div className="page-header">
         <div>
           <h1>添加公司</h1>
-          <p className="muted">Boss 插件一键导入 · Ollama 智能解析 · 截图 OCR</p>
+          <p className="muted">Boss 插件一键导入 · 粘贴 JD · 复制给 Cursor 带做项目</p>
           {extensionNotice && <p className="hint success-hint">{extensionNotice}</p>}
-          {saveError && <p className="hint">{saveError}</p>}
+          {saveError && <p className="hint error-hint">{saveError}</p>}
         </div>
       </div>
       <CompanyForm

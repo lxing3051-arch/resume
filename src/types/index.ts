@@ -22,8 +22,6 @@ export type ApplicationStatus =
   | '已OC'
   | '已结束'
 
-export type SkillLevel = '会' | '不会' | '需复习'
-
 export interface Company {
   id?: number
   name: string
@@ -35,7 +33,6 @@ export interface Company {
   deadline?: string
   jdRaw: string
   skills: string[]
-  skillRatings?: Record<string, SkillLevel>
   requirements?: string
   responsibilities?: string
   bossUrl?: string
@@ -139,7 +136,7 @@ export interface ProjectChatMessage {
   createdAt: string
 }
 
-/** AI 生成的匹配简历项目建议 */
+/** @deprecated 旧版嵌在公司内的项目建议，请使用 PortfolioProject + CompanyProjectLink */
 export interface ResumeProjectSuggestion {
   id: string
   title: string
@@ -151,6 +148,43 @@ export interface ResumeProjectSuggestion {
   currentStepIndex?: number
   chatHistory?: ProjectChatMessage[]
   status?: 'planned' | 'in_progress' | 'done'
+}
+
+export type ProjectStatus = 'planned' | 'in_progress' | 'done'
+
+/** 项目附件（代码压缩包、文档、截图等） */
+export interface ProjectFile {
+  id: string
+  fileName: string
+  fileBlob?: Blob
+  fileSize?: number
+  mimeType?: string
+  uploadedAt: string
+}
+
+/** 独立项目库条目，可关联多个岗位 */
+export interface PortfolioProject {
+  id?: number
+  title: string
+  description: string
+  techStack: string[]
+  highlights: string[]
+  repoUrl?: string
+  notes?: string
+  status: ProjectStatus
+  files: ProjectFile[]
+  createdAt: string
+  updatedAt: string
+}
+
+/** 岗位 ↔ 项目 多对多关联 */
+export interface CompanyProjectLink {
+  id?: number
+  companyId: number
+  projectId: number
+  /** 针对该岗位的简历表述（可选，不写则用项目默认描述） */
+  pitch?: string
+  linkedAt: string
 }
 
 export const DEFAULT_STAGES: StageType[] = [

@@ -33,9 +33,13 @@
     <h1>秋招助手插件设置</h1>
     <label>
       秋招助手地址
-      <input id="appUrl" placeholder="http://localhost:5173" />
+      <input id="appUrl" placeholder="https://lxing3051-arch.github.io/resume" />
     </label>
-    <p>本地开发默认 <code>http://localhost:5173</code>，GitHub Pages 填你的 Pages 地址。</p>
+    <p>
+      本地：<code>http://localhost:5173</code><br />
+      GitHub Pages 必须<strong>带仓库名</strong>，例如
+      <code>https://用户名.github.io/resume</code>（不要末尾 <code>/</code>）
+    </p>
     <button id="save">保存</button>
     <p id="msg"></p>
     <script src="options.js"></script>

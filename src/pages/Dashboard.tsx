@@ -89,7 +89,9 @@ export default function Dashboard() {
           <div className="todo-list">
             {todos.slice(0, 3).map((todo) => (
               <Link key={todo.id} to={todo.link ?? '/'} className={`todo-item ${todo.priority}`}>
-                <span className="todo-type">{todo.type === 'apply' ? '待投递' : todo.type === 'deadline' ? '截止' : todo.type === 'schedule' ? '安排' : '复习'}</span>
+                <span className="todo-type">
+                  {todo.type === 'apply' ? '待投递' : todo.type === 'deadline' ? '截止' : '安排'}
+                </span>
                 <div>
                   <strong>{todo.title}</strong>
                   <p className="muted small">{todo.subtitle}</p>
@@ -102,7 +104,7 @@ export default function Dashboard() {
 
       <div className="filters">
         <input
-          placeholder="搜索公司、岗位、技能..."
+          placeholder="搜索公司、岗位..."
           value={query}
           onChange={(e) => setQuery(e.target.value)}
         />

@@ -1,8 +1,7 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 import { Link } from 'react-router-dom'
 import { Layout, EmptyState } from '../components/Layout'
-import { db } from '../db/database'
-import { computeStats, computeTodos, skillSummary } from '../utils/statsService'
+import { computeStats, computeTodos } from '../utils/statsService'
 import { downloadCompaniesCsv } from '../utils/exportCsv'
 import type { ApplicationStatus } from '../types'
 
@@ -19,14 +18,11 @@ const TODO_LABELS = {
   apply: '待投递',
   deadline: '今日截止',
   schedule: '今日安排',
-  skill: '技能复习',
 }
 
 export default function Stats() {
   const stats = useLiveQuery(() => computeStats())
   const todos = useLiveQuery(() => computeTodos())
-  const companies = useLiveQuery(() => db.companies.toArray())
-  const skills = companies ? skillSummary(companies) : []
 
   return (
     <Layout>
@@ -105,7 +101,7 @@ export default function Stats() {
       <section className="panel">
         <h2>今日待办</h2>
         {!todos?.length ? (
-          <EmptyState title="今日暂无待办" hint="待投递、截止、面试安排和需复习技能会出现在这里" />
+          <EmptyState title="今日暂无待办" hint="待投递、截止日和面试安排会出现在这里" />
         ) : (
           <div className="todo-list">
             {todos.map((todo) => (
@@ -120,26 +116,6 @@ export default function Stats() {
           </div>
         )}
       </section>
-
-      {skills.length > 0 && (
-        <section className="panel">
-          <h2>技能缺口（需复习 / 不会）</h2>
-          <div className="skill-gap-list">
-            {skills
-              .filter((s) => s.不会 > 0 || s.需复习 > 0)
-              .slice(0, 15)
-              .map((s) => (
-                <div key={s.skill} className="skill-gap-row">
-                  <strong>{s.skill}</strong>
-                  <span className="tag skill-gap">{s.不会} 不会</span>
-                  <span className="tag skill-review">{s.需复习} 需复习</span>
-                  <span className="tag skill-ok">{s.会} 会</span>
-                  <span className="muted small">{s.companies.slice(0, 3).join('、')}</span>
-                </div>
-              ))}
-          </div>
-        </section>
-      )}
     </Layout>
   )
 }

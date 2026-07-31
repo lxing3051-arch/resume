@@ -3,7 +3,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useState } from 'react'
 import { Layout, StatusBadge, daysUntil } from '../components/Layout'
 import { JDAnalysisPanel } from '../components/JDAnalysisPanel'
-import { SkillRatingBadges } from '../components/SkillRatingEditor'
+import { CompanyProjectLinks } from '../components/CompanyProjectLinks'
 import { db } from '../db/database'
 import { addCustomStage, updateStageStatus, deleteCompany } from '../utils/companyService'
 import { createInterviewNote, updateStageSchedule } from '../utils/noteService'
@@ -85,7 +85,7 @@ export default function CompanyDetail() {
         {daysUntil(company.deadline) && <span className="deadline">{daysUntil(company.deadline)}</span>}
       </div>
 
-      <section className="panel">
+      <section className="panel panel-stages">
         <div className="panel-head">
           <h2>进度跟踪</h2>
           <button
@@ -96,51 +96,58 @@ export default function CompanyDetail() {
             + 阶段
           </button>
         </div>
-        <div className="stage-list">
-          {stageList.map((stage) => (
-            <div key={stage.id} className="stage-block">
-              <div className="stage-row">
-                <strong>{stage.type}</strong>
-                <select
-                  value={stage.status}
-                  onChange={(e) =>
-                    updateStageStatus(stage.id!, companyId, e.target.value as StageStatus)
-                  }
-                >
-                  {STAGE_STATUS.map((s) => (
-                    <option key={s} value={s}>
-                      {s}
-                    </option>
-                  ))}
-                </select>
-                {stage.completedAt && (
-                  <span className="muted small">完成于 {stage.completedAt.slice(0, 10)}</span>
-                )}
+        <div className="stage-pipeline">
+          {stageList.map((stage, index) => (
+            <div key={stage.id} className="stage-pipeline-item">
+              {index > 0 && <div className="stage-pipeline-line" aria-hidden />}
+              <div className="stage-block" data-status={stage.status}>
+                <div className="stage-row">
+                  <strong>{stage.type}</strong>
+                  <select
+                    value={stage.status}
+                    onChange={(e) =>
+                      updateStageStatus(stage.id!, companyId, e.target.value as StageStatus)
+                    }
+                  >
+                    {STAGE_STATUS.map((s) => (
+                      <option key={s} value={s}>
+                        {s}
+                      </option>
+                    ))}
+                  </select>
+                  {stage.completedAt && (
+                    <span className="muted small stage-done-date">{stage.completedAt.slice(0, 10)}</span>
+                  )}
+                </div>
+                <details className="stage-details">
+                  <summary>时间 / 备注</summary>
+                  <label className="field inline stage-field">
+                    <span>安排时间</span>
+                    <input
+                      type="datetime-local"
+                      value={stage.scheduledAt?.slice(0, 16) ?? ''}
+                      onChange={(e) =>
+                        updateStageSchedule(stage.id!, {
+                          scheduledAt:
+                            e.target.value ? new Date(e.target.value).toISOString() : undefined,
+                        })
+                      }
+                    />
+                  </label>
+                  <label className="field inline stage-field">
+                    <span>备注</span>
+                    <input
+                      placeholder="会议链接等"
+                      defaultValue={stage.notes ?? ''}
+                      onBlur={(e) => updateStageSchedule(stage.id!, { notes: e.target.value })}
+                    />
+                  </label>
+                </details>
               </div>
-              <label className="field inline">
-                <span>安排时间（到时会浏览器提醒）</span>
-                <input
-                  type="datetime-local"
-                  value={stage.scheduledAt?.slice(0, 16) ?? ''}
-                  onChange={(e) =>
-                    updateStageSchedule(stage.id!, {
-                      scheduledAt: e.target.value ? new Date(e.target.value).toISOString() : undefined,
-                    })
-                  }
-                />
-              </label>
-              <label className="field inline">
-                <span>阶段备注</span>
-                <input
-                  placeholder="例如：腾讯会议链接、注意事项"
-                  defaultValue={stage.notes ?? ''}
-                  onBlur={(e) => updateStageSchedule(stage.id!, { notes: e.target.value })}
-                />
-              </label>
             </div>
           ))}
         </div>
-        <div className="quick-actions">
+        <div className="quick-actions stage-quick-actions">
           {(['笔试', '一面', '拒信'] as StageType[]).map((type) => (
             <button
               key={type}
@@ -156,15 +163,16 @@ export default function CompanyDetail() {
 
       <section className="panel panel-jd">
         <h2>岗位要求</h2>
-        <SkillRatingBadges skills={company.skills ?? []} ratings={company.skillRatings} />
         <JDAnalysisPanel
           analysis={company.jdAnalysis}
-          resumeProjects={company.resumeProjects}
           jdRaw={company.jdRaw}
           position={company.position}
+          companyName={company.name}
           companyId={companyId}
         />
       </section>
+
+      <CompanyProjectLinks companyId={companyId} />
 
       <section className="panel">
         <div className="panel-head">

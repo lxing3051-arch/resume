@@ -93,11 +93,11 @@ importBtn.addEventListener('click', async () => {
   if (res?.ok) {
     setStatus('已发送，请在秋招助手确认')
     if (res.mode === 'failed') {
-      setStatus('网站未响应，请用「复制到剪贴板」导入')
+      setStatus(`网站未响应。请检查插件地址是否为 ${res.target || '完整网址（含仓库名）'}，或用「复制到剪贴板」导入`)
     }
     window.close()
   } else {
-    setStatus('打开失败，请检查设置中的地址')
+    setStatus('打开失败，请检查插件设置中的秋招助手地址')
   }
 })
 

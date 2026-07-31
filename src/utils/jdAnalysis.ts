@@ -89,5 +89,58 @@ export async function generateResumeProjects(
   }))
 }
 
+/** AI 不可用时的规则模板项目（无需联网） */
+export function generateResumeProjectsByRules(
+  analysis: JdAnalysis,
+  position: string,
+): ResumeProjectSuggestion[] {
+  const skills = analysis.hardSkills.length ? analysis.hardSkills : ['Python', 'SQL']
+  const focus = analysis.projectRequirements[0] ?? analysis.responsibilities[0] ?? position
+  const now = new Date().toISOString()
+
+  const templates: Array<Omit<ResumeProjectSuggestion, 'id' | 'createdAt' | 'status'>> = [
+    {
+      title: `${position} · 数据分析实战项目`,
+      description: `围绕「${focus.slice(0, 40)}…」设计的数据分析项目：数据采集、清洗、建模与可视化报告。`,
+      techStack: skills.slice(0, 5),
+      highlights: [
+        `使用 ${skills.slice(0, 3).join('、') || 'SQL/Python'} 完成业务指标分析`,
+        '输出可演示的数据看板或分析报告',
+        '项目过程可整理为简历 STAR 描述',
+      ],
+    },
+    {
+      title: `${position} · 业务场景模拟项目`,
+      description: '基于 JD 职责设计的端到端小项目，覆盖需求分析、实现与结果复盘。',
+      techStack: skills.slice(0, 4),
+      highlights: [
+        '按 JD 要求选取 1 个核心业务场景落地',
+        `对齐岗位技能：${skills.slice(0, 4).join('、')}`,
+        '形成 GitHub 仓库或文档作为作品链接',
+      ],
+    },
+  ]
+
+  if (analysis.projectRequirements.some((r) => /RAG|AutoML|Agent|建模/i.test(r))) {
+    templates.push({
+      title: `${position} · AI/建模专项练习`,
+      description: '针对 JD 中的 AI、建模或 RAG 要求设计的练习项目。',
+      techStack: [...skills.slice(0, 3), 'Prompt Engineering'].filter(Boolean),
+      highlights: [
+        '完成一个可演示的建模或 AI 应用原型',
+        '记录实验过程与效果指标',
+        '总结可写进简历的技术亮点',
+      ],
+    })
+  }
+
+  return templates.slice(0, 3).map((p) => ({
+    ...p,
+    id: createProjectId(),
+    createdAt: now,
+    status: 'planned' as const,
+  }))
+}
+
 // 兼容旧名称
 export const analyzeJDWithOllama = analyzeJDWithAi

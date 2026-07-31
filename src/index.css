@@ -413,11 +413,69 @@ a {
   gap: 10px;
 }
 
+.stage-pipeline {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  align-items: flex-start;
+  overflow-x: auto;
+  padding: 4px 4px 12px;
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+}
+
+.stage-pipeline-item {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  flex: 0 0 auto;
+  scroll-snap-align: start;
+}
+
+.stage-pipeline-line {
+  width: 20px;
+  height: 2px;
+  background: var(--border);
+  flex-shrink: 0;
+  margin: 0 2px;
+}
+
+.stage-pipeline::-webkit-scrollbar {
+  height: 8px;
+}
+
+.stage-pipeline::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 4px;
+}
+
+.panel-stages .stage-list {
+  display: none;
+}
+
 .stage-row {
   display: grid;
   grid-template-columns: 100px 1fr auto;
   gap: 12px;
   align-items: center;
+}
+
+.panel-stages .stage-row {
+  grid-template-columns: 1fr;
+  gap: 6px;
+  align-items: stretch;
+}
+
+.panel-stages .stage-row strong {
+  font-size: 0.95rem;
+}
+
+.panel-stages .stage-done-date {
+  font-size: 0.75rem;
+}
+
+.stage-quick-actions {
+  margin-top: 12px;
 }
 
 .quick-actions {
@@ -491,6 +549,72 @@ a {
   display: flex;
   flex-direction: column;
   gap: 8px;
+}
+
+.panel-stages .stage-block {
+  flex: 0 0 148px;
+  width: 148px;
+  min-width: 148px;
+  scroll-snap-align: start;
+  border-left: 3px solid var(--border);
+  padding: 10px 8px;
+  gap: 6px;
+}
+
+.stage-details {
+  margin-top: 4px;
+}
+
+.stage-details summary {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  cursor: pointer;
+  list-style: none;
+  user-select: none;
+}
+
+.stage-details summary::-webkit-details-marker {
+  display: none;
+}
+
+.stage-details summary::before {
+  content: '▸ ';
+}
+
+.stage-details[open] summary::before {
+  content: '▾ ';
+}
+
+.stage-details .stage-field {
+  margin-top: 6px;
+}
+
+.panel-stages .stage-block[data-status='已完成'] {
+  border-left-color: #22c55e;
+}
+
+.panel-stages .stage-block[data-status='进行中'] {
+  border-left-color: #3b82f6;
+}
+
+.panel-stages .stage-block[data-status='已跳过'] {
+  border-left-color: var(--text-muted);
+  opacity: 0.85;
+}
+
+.panel-stages .stage-row select,
+.panel-stages .stage-field input {
+  padding: 6px 8px;
+  font-size: 0.85rem;
+}
+
+.panel-stages .stage-field span {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.panel-stages .stage-field {
+  margin-bottom: 0;
 }
 
 .field.inline {
@@ -708,86 +832,8 @@ a {
   color: var(--text-muted);
 }
 
-.skill-gap-list {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.skill-gap-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  align-items: center;
-  padding: 10px;
-  background: var(--surface-muted);
-  border-radius: 8px;
-}
-
-.skill-rating-panel {
-  margin-bottom: 16px;
-  padding: 12px;
-  background: var(--surface-muted);
-  border-radius: 8px;
-}
-
-.skill-rating-list {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.skill-rating-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 12px;
-  flex-wrap: wrap;
-}
-
-.skill-level-btns {
-  display: flex;
-  gap: 6px;
-}
-
-.skill-level-btn {
-  border: 1px solid var(--border);
-  background: var(--surface);
-  border-radius: 6px;
-  padding: 4px 8px;
-  font-size: 0.8rem;
-  cursor: pointer;
-  color: var(--text);
-}
-
-.skill-level-btn.active.skill-ok {
-  background: #dcfce7;
-  border-color: #22c55e;
-}
-
-.skill-level-btn.active.skill-review {
-  background: #fef3c7;
-  border-color: #f59e0b;
-}
-
-.skill-level-btn.active.skill-gap {
-  background: #fee2e2;
-  border-color: #ef4444;
-}
-
-.tag.skill-ok {
-  background: #dcfce7;
-  color: #166534;
-}
-
-.tag.skill-review {
-  background: #fef3c7;
-  color: #92400e;
-}
-
-.tag.skill-gap {
-  background: #fee2e2;
-  color: #991b1b;
+.jd-skills-preview {
+  margin-bottom: 12px;
 }
 
 .match-rate {
@@ -1016,11 +1062,51 @@ code {
   margin-bottom: 8px;
 }
 
-.project-card p {
-  margin: 0 0 10px;
-  color: var(--text-subtle);
-  font-size: 0.92rem;
+.link-project-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  margin-top: 12px;
 }
+
+.link-project-row select {
+  flex: 1;
+  min-width: 200px;
+}
+
+.link-list {
+  margin: 8px 0 0;
+  padding-left: 18px;
+}
+
+.project-files {
+  margin-top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.project-links {
+  margin-top: 12px;
+}
+
+.project-title-input {
+  flex: 1;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.project-edit-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.project-card.compact {
+  margin-bottom: 10px;
+}
+
 
 .jd-raw-block {
   margin-top: 16px;

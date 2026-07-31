@@ -16,37 +16,12 @@ import {
   requestNotificationPermission,
   saveNotificationSettings,
 } from '../utils/notifications'
-import { checkOllamaAvailable, listOllamaModels } from '../utils/ollama'
-import { getAiSettings, getProviderLabel, saveAiSettings } from '../utils/aiSettings'
-import { getActiveProviderLabel } from '../utils/aiProvider'
-import { getOllamaSettings, saveOllamaSettings } from '../utils/ollamaSettings'
-import {
-  GEMINI_MODELS,
-  getGeminiSettings,
-  listGeminiModels,
-  saveGeminiSettings,
-  testGeminiConnection,
-} from '../utils/gemini'
 import { getThemeMode, saveThemeMode } from '../utils/theme'
-import type {
-  AiProvider,
-  GeminiSettings,
-  NotificationSettings,
-  OllamaSettings,
-  ThemeMode,
-} from '../types'
+import type { NotificationSettings, ThemeMode } from '../types'
 
 export default function Settings() {
   const [settings, setSettings] = useState<NotificationSettings>(getNotificationSettings())
   const [theme, setTheme] = useState<ThemeMode>(getThemeMode())
-  const [ollama, setOllama] = useState<OllamaSettings>(getOllamaSettings())
-  const [ai, setAi] = useState(getAiSettings())
-  const [gemini, setGemini] = useState<GeminiSettings>(getGeminiSettings())
-  const [ollamaStatus, setOllamaStatus] = useState('')
-  const [geminiStatus, setGeminiStatus] = useState('')
-  const [geminiModelOptions, setGeminiModelOptions] = useState<string[]>([...GEMINI_MODELS])
-  const [aiStatus, setAiStatus] = useState('检测中…')
-  const [models, setModels] = useState<string[]>([])
   const [syncFolder, setSyncFolder] = useState<string | null>(null)
   const [syncMsg, setSyncMsg] = useState('')
   const [permission, setPermission] = useState(
@@ -57,14 +32,6 @@ export default function Settings() {
     void getSyncFolderName().then(setSyncFolder)
   }, [])
 
-  useEffect(() => {
-    void refreshAiStatus()
-  }, [ai.provider, gemini.apiKey, ollama.enabled])
-
-  async function refreshAiStatus() {
-    setAiStatus(await getActiveProviderLabel())
-  }
-
   function updateSettings(patch: Partial<NotificationSettings>) {
     const next = { ...settings, ...patch }
     setSettings(next)
@@ -74,58 +41,6 @@ export default function Settings() {
   function updateTheme(mode: ThemeMode) {
     setTheme(mode)
     saveThemeMode(mode)
-  }
-
-  function updateOllama(patch: Partial<OllamaSettings>) {
-    const next = { ...ollama, ...patch }
-    setOllama(next)
-    saveOllamaSettings(next)
-  }
-
-  function updateAi(patch: Partial<typeof ai>) {
-    const next = { ...ai, ...patch }
-    setAi(next)
-    saveAiSettings(next)
-  }
-
-  function updateGemini(patch: Partial<GeminiSettings>) {
-    const next = { ...gemini, ...patch }
-    setGemini(next)
-    saveGeminiSettings(next)
-  }
-
-  async function handleTestOllama() {
-    setOllamaStatus('检测中...')
-    const ok = await checkOllamaAvailable()
-    if (!ok) {
-      setOllamaStatus('未连接。这是 Ollama 本地服务，与 Gemini 无关。只用 Gemini 可忽略本节，或运行 ollama serve')
-      return
-    }
-    try {
-      const list = await listOllamaModels()
-      setModels(list)
-      setOllamaStatus(`已连接，${list.length} 个模型可用`)
-      if (list.length && !list.includes(ollama.model)) {
-        updateOllama({ model: list[0]! })
-      }
-    } catch {
-      setOllamaStatus('已连接但无法列出模型')
-    }
-  }
-
-  async function handleTestGemini() {
-    setGeminiStatus('检测中...')
-    try {
-      const msg = await testGeminiConnection()
-      const list = await listGeminiModels(gemini.apiKey)
-      setGeminiModelOptions(list)
-      setGemini({ ...getGeminiSettings() })
-      updateAi({ provider: 'gemini' })
-      setGeminiStatus(`${msg} · 已切换为 Gemini 引擎`)
-      void refreshAiStatus()
-    } catch (e) {
-      setGeminiStatus(e instanceof Error ? e.message : '连接失败')
-    }
   }
 
   async function handleEnableNotifications() {
@@ -190,7 +105,7 @@ export default function Settings() {
       <div className="page-header">
         <div>
           <h1>设置与备份</h1>
-          <p className="muted">插件、AI 引擎、文件夹同步、外观</p>
+          <p className="muted">插件、文件夹同步、外观</p>
         </div>
       </div>
 
@@ -206,114 +121,11 @@ export default function Settings() {
       </section>
 
       <section className="panel">
-        <h2>AI 引擎</h2>
-        <p className="hint">JD 分析、项目生成、带做辅导均使用此处配置的引擎。</p>
-        <div className="settings-row">
-          <span>当前状态</span>
-          <strong>{aiStatus}</strong>
-        </div>
-        <label className="field">
-          <span>优先使用</span>
-          <select
-            value={ai.provider}
-            onChange={(e) => updateAi({ provider: e.target.value as AiProvider })}
-          >
-            <option value="auto">自动（优先 Gemini，不可用则 Ollama）</option>
-            <option value="gemini">Gemini Pro（云端）</option>
-            <option value="ollama">Ollama（本地）</option>
-          </select>
-        </label>
-        <label className="checkbox-row">
-          <input
-            type="checkbox"
-            checked={ai.autoAnalyze}
-            onChange={(e) => updateAi({ autoAnalyze: e.target.checked })}
-          />
-          录入 JD 后自动 AI 分析
-        </label>
-        <p className="hint muted small">当前策略：{getProviderLabel(ai.provider)}</p>
-      </section>
-
-      <section className="panel">
-        <h2>Gemini Pro（Google AI）</h2>
+        <h2>做项目（Cursor 带做）</h2>
         <p className="hint">
-          在{' '}
-          <a href="https://aistudio.google.com/apikey" target="_blank" rel="noreferrer">
-            Google AI Studio
-          </a>{' '}
-          用<strong>同一个 Google 账号</strong>创建 API Key（与 Gemini Pro 订阅同账号即可，无需 Edge/Copilot）。
-          带做项目推荐选 API 返回的 <code>gemini-2.5-flash</code>。
-          若报 429 / Quota limit 0，说明该模型对你 Key 无免费额度，请换 2.5 系列。
+          本网站不再内置 AI 分析。在公司详情页粘贴 JD 后，点「复制给 Cursor」，把内容粘贴到 Cursor 对话里，让 AI
+          帮你选题、设计项目并一步步带做代码。
         </p>
-        <p className="hint muted small">
-          API Key 仅保存在浏览器本地。新版 Key 以 <code>AQ.</code> 开头正常。
-          <strong> Gemini 请在本地 </strong><code>npm run dev</code> 使用（已修复代理）；GitHub Pages 线上可能无法直连。
-        </p>
-        <label className="field">
-          <span>API Key</span>
-          <input
-            type="password"
-            value={gemini.apiKey}
-            placeholder="AIza... 或 AQ...."
-            autoComplete="off"
-            onChange={(e) => updateGemini({ apiKey: e.target.value.trim() })}
-          />
-        </label>
-        <label className="field">
-          <span>模型</span>
-          <select value={gemini.model} onChange={(e) => updateGemini({ model: e.target.value })}>
-            {geminiModelOptions.map((m) => (
-              <option key={m} value={m}>
-                {m}
-              </option>
-            ))}
-          </select>
-        </label>
-        <button className="btn primary" type="button" onClick={() => void handleTestGemini()}>
-          测试 Gemini 连接
-        </button>
-        {geminiStatus && <p className="hint">{geminiStatus}</p>}
-      </section>
-
-      <section className="panel panel-muted">
-        <h2>Ollama 本地 AI（可选）</h2>
-        <p className="hint">
-          <strong>已配置 Gemini 时不必安装 Ollama。</strong> 本节仅作免费本地备用。
-          安装 <a href="https://ollama.com">Ollama</a> 后运行 <code>ollama serve</code> 与 <code>ollama pull llama3.2</code>。
-        </p>
-        <label className="checkbox-row">
-          <input
-            type="checkbox"
-            checked={ollama.enabled}
-            onChange={(e) => updateOllama({ enabled: e.target.checked })}
-          />
-          启用 Ollama 作为 AI 引擎（或自动模式的备用）
-        </label>
-        <label className="field">
-          <span>Ollama 地址</span>
-          <input
-            value={ollama.baseUrl}
-            onChange={(e) => updateOllama({ baseUrl: e.target.value.replace(/\/$/, '') })}
-          />
-        </label>
-        <label className="field">
-          <span>模型名称</span>
-          {models.length > 0 ? (
-            <select value={ollama.model} onChange={(e) => updateOllama({ model: e.target.value })}>
-              {models.map((m) => (
-                <option key={m} value={m}>
-                  {m}
-                </option>
-              ))}
-            </select>
-          ) : (
-            <input value={ollama.model} onChange={(e) => updateOllama({ model: e.target.value })} />
-          )}
-        </label>
-        <button className="btn ghost" type="button" onClick={() => void handleTestOllama()}>
-          测试 Ollama 连接（非 Gemini）
-        </button>
-        {ollamaStatus && <p className="hint">{ollamaStatus}</p>}
       </section>
 
       {supportsFolderSync() && (
@@ -373,7 +185,7 @@ export default function Settings() {
           <strong>{permission === 'unsupported' ? '浏览器不支持' : permission}</strong>
         </div>
         {permission !== 'granted' && (
-          <button className="btn primary" type="button" onClick={handleEnableNotifications}>
+          <button className="btn primary" type="button" onClick={() => void handleEnableNotifications()}>
             开启浏览器通知
           </button>
         )}
@@ -415,7 +227,7 @@ export default function Settings() {
       <div className="two-col">
         <section className="panel">
           <h2>导出 JSON 备份</h2>
-          <button className="btn primary" type="button" onClick={handleExport}>
+          <button className="btn primary" type="button" onClick={() => void handleExport()}>
             导出 JSON
           </button>
         </section>

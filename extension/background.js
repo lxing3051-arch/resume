@@ -9,7 +9,7 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
 
 async function getAppUrl() {
   const { appUrl } = await chrome.storage.sync.get({ appUrl: DEFAULT_APP_URL })
-  return appUrl.replace(/\/$/, '')
+  return appUrl.trim().replace(/\/$/, '')
 }
 
 function isAppTab(url) {
@@ -27,38 +27,50 @@ function isCompanyNewPage(url) {
   return url && url.includes('/company/new')
 }
 
+function buildNewCompanyUrl(appUrl) {
+  return `${appUrl}/company/new`
+}
+
 function waitForTabComplete(tabId) {
   return new Promise((resolve) => {
     const timeout = setTimeout(() => {
       chrome.tabs.onUpdated.removeListener(listener)
       resolve()
-    }, 8000)
+    }, 12000)
 
     function listener(id, info) {
       if (id === tabId && info.status === 'complete') {
         clearTimeout(timeout)
         chrome.tabs.onUpdated.removeListener(listener)
-        setTimeout(resolve, 300)
+        setTimeout(resolve, 500)
       }
     }
     chrome.tabs.onUpdated.addListener(listener)
   })
 }
 
+async function deliverViaContentScript(tabId, payload) {
+  try {
+    await chrome.tabs.sendMessage(tabId, { type: 'DELIVER_IMPORT', payload })
+    return true
+  } catch {
+    return false
+  }
+}
+
 async function deliverViaMainWorld(tabId, payload) {
-  for (let i = 0; i < 8; i++) {
+  for (let i = 0; i < 12; i++) {
     try {
-      await chrome.scripting.executeScript({
-        target: { tabId },
-        world: 'MAIN',
-        files: ['deliver-main.js'],
-      })
       await chrome.scripting.executeScript({
         target: { tabId },
         world: 'MAIN',
         func: (data) => {
           const KEY = 'job-tracker-pending-import'
-          localStorage.setItem(KEY, JSON.stringify(data))
+          try {
+            localStorage.setItem(KEY, JSON.stringify(data))
+          } catch {
+            /* ignore */
+          }
           window.postMessage({ type: 'JOB_TRACKER_IMPORT', payload: data }, window.location.origin)
           window.dispatchEvent(new CustomEvent('job-tracker-import', { detail: data }))
           if (window.__JOB_TRACKER__?.dispatchImport) {
@@ -69,15 +81,20 @@ async function deliverViaMainWorld(tabId, payload) {
       })
       return true
     } catch {
-      await new Promise((r) => setTimeout(r, 400))
+      await new Promise((r) => setTimeout(r, 500))
     }
   }
   return false
 }
 
+async function deliverImport(tabId, payload) {
+  await deliverViaContentScript(tabId, payload)
+  return deliverViaMainWorld(tabId, payload)
+}
+
 async function openAppWithImport(payload) {
   const appUrl = await getAppUrl()
-  const target = `${appUrl}/company/new`
+  const target = buildNewCompanyUrl(appUrl)
 
   await chrome.storage.session.set({ pendingImport: payload })
 
@@ -92,6 +109,8 @@ async function openAppWithImport(payload) {
     if (!isCompanyNewPage(appTab.url)) {
       await chrome.tabs.update(tabId, { url: target })
       await waitForTabComplete(tabId)
+    } else {
+      await new Promise((r) => setTimeout(r, 300))
     }
   } else {
     const created = await chrome.tabs.create({ url: target, active: true })
@@ -99,6 +118,6 @@ async function openAppWithImport(payload) {
     await waitForTabComplete(tabId)
   }
 
-  const ok = await deliverViaMainWorld(tabId, payload)
-  return { ok, mode: ok ? 'main-world' : 'failed' }
+  const ok = await deliverImport(tabId, payload)
+  return { ok, mode: ok ? 'delivered' : 'failed', target }
 }

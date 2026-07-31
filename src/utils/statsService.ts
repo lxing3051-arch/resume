@@ -1,6 +1,6 @@
 import { isSameDay, parseISO } from 'date-fns'
 import { db } from '../db/database'
-import type { ApplicationStatus, Company, SkillLevel, Stage } from '../types'
+import type { ApplicationStatus, Stage } from '../types'
 
 export interface RecruitStats {
   total: number
@@ -18,7 +18,7 @@ export interface RecruitStats {
 
 export interface TodoItem {
   id: string
-  type: 'apply' | 'deadline' | 'schedule' | 'skill'
+  type: 'apply' | 'deadline' | 'schedule'
   priority: 'high' | 'medium' | 'low'
   title: string
   subtitle: string
@@ -123,23 +123,6 @@ export async function computeTodos(): Promise<TodoItem[]> {
         link: `/company/${company.id}`,
       })
     }
-
-    for (const skill of company.skills) {
-      const level = company.skillRatings?.[skill]
-      if (level === '需复习' || level === '不会') {
-        if (!['已OC', '已结束'].includes(company.status)) {
-          todos.push({
-            id: `skill-${company.id}-${skill}`,
-            type: 'skill',
-            priority: level === '不会' ? 'high' : 'medium',
-            title: `复习 ${skill}`,
-            subtitle: `${company.name} · ${company.position}`,
-            companyId: company.id,
-            link: `/company/${company.id}/edit`,
-          })
-        }
-      }
-    }
   }
 
   for (const stage of stages) {
@@ -162,21 +145,3 @@ export async function computeTodos(): Promise<TodoItem[]> {
   const order = { high: 0, medium: 1, low: 2 }
   return todos.sort((a, b) => order[a.priority] - order[b.priority])
 }
-
-export function skillSummary(companies: Company[]) {
-  const map = new Map<string, { 会: number; 不会: number; 需复习: number; companies: string[] }>()
-  for (const company of companies) {
-    for (const skill of company.skills) {
-      const level = company.skillRatings?.[skill] ?? '需复习'
-      const entry = map.get(skill) ?? { 会: 0, 不会: 0, 需复习: 0, companies: [] }
-      entry[level]++
-      if (!entry.companies.includes(company.name)) entry.companies.push(company.name)
-      map.set(skill, entry)
-    }
-  }
-  return [...map.entries()]
-    .map(([skill, data]) => ({ skill, ...data }))
-    .sort((a, b) => b.不会 + b.需复习 - (a.不会 + a.需复习))
-}
-
-export type { SkillLevel }

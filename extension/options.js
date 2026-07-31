@@ -6,8 +6,14 @@ chrome.storage.sync.get({ appUrl: 'http://localhost:5173' }, (data) => {
 })
 
 document.getElementById('save').addEventListener('click', () => {
-  const appUrl = input.value.trim().replace(/\/$/, '')
+  let appUrl = input.value.trim().replace(/\/$/, '')
+  if (appUrl.includes('github.io') && !appUrl.match(/github\.io\/[^/]+/)) {
+    msg.textContent = 'GitHub Pages 地址需包含仓库名，如 https://用户名.github.io/resume'
+    msg.style.color = '#b91c1c'
+    return
+  }
   chrome.storage.sync.set({ appUrl }, () => {
-    msg.textContent = '已保存'
+    msg.textContent = '已保存：' + appUrl
+    msg.style.color = '#15803d'
   })
 })

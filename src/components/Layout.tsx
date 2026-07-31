@@ -31,6 +31,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
           <Link to="/stats">数据</Link>
           <Link to="/company/new">添加</Link>
           <Link to="/resumes">简历</Link>
+          <Link to="/projects">项目</Link>
           <Link to="/notes">面经</Link>
           <Link to="/settings">设置</Link>
         </nav>

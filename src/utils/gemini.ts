@@ -207,13 +207,33 @@ export async function geminiGenerateJson<T>(prompt: string): Promise<T> {
   const { apiKey, model } = getGeminiSettings()
   if (!apiKey.trim()) throw new Error('请先在设置中填写 Gemini API Key')
 
-  const text = await geminiRequest(model, apiKey, {
+  const body = {
     contents: [{ role: 'user', parts: [{ text: prompt }] }],
     generationConfig: { responseMimeType: 'application/json' },
-  })
+  }
 
-  const cleaned = text.replace(/^```json\s*/i, '').replace(/```\s*$/, '').trim()
-  return JSON.parse(cleaned) as T
+  const listed = await listGeminiModels(apiKey)
+  const preferred = pickBestTextModel(listed)
+  const candidates = [
+    ...new Set([...(listed.includes(model) ? [model] : []), preferred, ...listed]),
+  ].slice(0, 6)
+
+  let lastError = 'Gemini 请求失败'
+
+  for (const m of candidates) {
+    try {
+      const text = await geminiRequest(m, apiKey, body)
+      const cleaned = text.replace(/^```json\s*/i, '').replace(/```\s*$/, '').trim()
+      saveGeminiSettings({ ...getGeminiSettings(), model: m })
+      return JSON.parse(cleaned) as T
+    } catch (e) {
+      const raw = e instanceof Error ? e.message : 'Gemini 请求失败'
+      lastError = raw.startsWith('__RETRY__:') ? raw.slice('__RETRY__:'.length) : raw
+      if (!raw.startsWith('__RETRY__:')) break
+    }
+  }
+
+  throw new Error(lastError)
 }
 
 export async function geminiChat(

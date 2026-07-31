@@ -1,5 +1,4 @@
 import type { CompanyFormData } from './companyForm'
-import { initSkillRatings } from './companyForm'
 import { parseJDText, pickSectionText } from './jdParser'
 import { analyzeJDByRules, mergeSkillsFromAnalysis } from './jdAnalyzer'
 import {
@@ -22,17 +21,31 @@ export function stashExtensionImport(payload: ExtensionImportPayload) {
   }
 }
 
-export function consumePendingExtensionImport(): ExtensionImportPayload | null {
+/** 读取待导入数据，但不删除（避免 React 严格模式/重复挂载丢数据） */
+export function peekPendingExtensionImport(): ExtensionImportPayload | null {
   try {
     const raw = localStorage.getItem(PENDING_KEY)
     if (!raw) return null
-    localStorage.removeItem(PENDING_KEY)
     const data = JSON.parse(raw) as unknown
     if (isExtensionImportPayload(data)) return data
   } catch {
     /* ignore */
   }
   return null
+}
+
+export function clearPendingExtensionImport() {
+  try {
+    localStorage.removeItem(PENDING_KEY)
+  } catch {
+    /* ignore */
+  }
+}
+
+export function consumePendingExtensionImport(): ExtensionImportPayload | null {
+  const data = peekPendingExtensionImport()
+  if (data) clearPendingExtensionImport()
+  return data
 }
 
 export function extensionPayloadToForm(
@@ -48,8 +61,13 @@ export function extensionPayloadToForm(
   })
   const mergedSkills = mergeSkillsFromAnalysis(analysis, skills)
 
+  // Boss 插件有时把「公司名称」前缀写进 name
+  const cleanName = (payload.name || parsed.name || current.name)
+    .replace(/^公司名称\s*/, '')
+    .trim()
+
   return {
-    name: payload.name || parsed.name || current.name,
+    name: cleanName,
     position: payload.position || parsed.position || current.position,
     location: payload.location || parsed.location || current.location,
     salary: payload.salary || parsed.salary || current.salary,
@@ -62,7 +80,6 @@ export function extensionPayloadToForm(
     ),
     bossUrl: payload.bossUrl || current.bossUrl,
     skills: mergedSkills,
-    skillRatings: initSkillRatings(mergedSkills, current.skillRatings),
     jdAnalysis: analysis,
   }
 }

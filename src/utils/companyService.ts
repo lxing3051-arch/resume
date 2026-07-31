@@ -1,6 +1,7 @@
 import { db } from '../db/database'
 import type { ApplicationStatus, Company, Season, Stage, StageType } from '../types'
 import { DEFAULT_STAGES } from '../types'
+import { deleteLinksForCompany } from './companyProjectService'
 
 export function inferStatus(stages: Stage[]): ApplicationStatus {
   if (stages.some((s) => s.type === '拒信' && s.status === '已完成')) return '已结束'
@@ -35,9 +36,10 @@ export async function createCompany(
 }
 
 export async function deleteCompany(companyId: number) {
-  await db.transaction('rw', db.companies, db.stages, db.interviewNotes, async () => {
+  await db.transaction('rw', db.companies, db.stages, db.interviewNotes, db.companyProjectLinks, async () => {
     await db.stages.where('companyId').equals(companyId).delete()
     await db.interviewNotes.where('companyId').equals(companyId).delete()
+    await deleteLinksForCompany(companyId)
     await db.companies.delete(companyId)
   })
 }

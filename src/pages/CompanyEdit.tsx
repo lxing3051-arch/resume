@@ -41,7 +41,7 @@ export default function CompanyEdit() {
             ← 返回详情
           </Link>
           <h1>编辑 · {company.name}</h1>
-          <p className="muted">修改岗位信息、联系人、技能自评</p>
+          <p className="muted">修改岗位信息、联系人</p>
         </div>
       </div>
       <CompanyForm

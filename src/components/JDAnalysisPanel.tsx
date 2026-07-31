@@ -1,25 +1,16 @@
 import { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
-import type { JdAnalysis, ResumeProjectSuggestion } from '../types'
+import type { JdAnalysis } from '../types'
 import { analyzeJDByRules } from '../utils/jdAnalyzer'
-import { analyzeJD, generateResumeProjects } from '../utils/jdAnalysis'
-import { getAiSettings, getProviderLabel } from '../utils/aiSettings'
-import { isAiConfigured } from '../utils/aiProvider'
-import {
-  copyProjectToClipboard,
-  saveJdAnalysis,
-  saveResumeProjects,
-} from '../utils/jdAnalysisService'
-import { normalizeLegacyProject } from '../utils/projectCoach'
+import { saveJdAnalysis } from '../utils/jdAnalysisService'
+import { buildAnalysisSummary, buildCursorProjectPrompt } from '../utils/cursorPrompt'
 
 interface Props {
   analysis?: JdAnalysis
-  resumeProjects?: ResumeProjectSuggestion[]
   jdRaw: string
   position: string
+  companyName?: string
   companyId?: number
   onAnalysisChange?: (analysis: JdAnalysis) => void
-  onProjectsChange?: (projects: ResumeProjectSuggestion[]) => void
   compact?: boolean
 }
 
@@ -66,32 +57,22 @@ function JdSection({
 
 export function JDAnalysisPanel({
   analysis: initialAnalysis,
-  resumeProjects: initialProjects = [],
   jdRaw,
   position,
+  companyName,
   companyId,
   onAnalysisChange,
-  onProjectsChange,
   compact = false,
 }: Props) {
   const [analysis, setAnalysis] = useState(initialAnalysis)
-  const [projects, setProjects] = useState(initialProjects.map(normalizeLegacyProject))
-  const [analyzing, setAnalyzing] = useState(false)
-  const [generating, setGenerating] = useState(false)
+  const [classifying, setClassifying] = useState(false)
   const [message, setMessage] = useState('')
   const [showRaw, setShowRaw] = useState(false)
   const [showCompany, setShowCompany] = useState(false)
-  const aiSettings = getAiSettings()
-  const aiConfigured = isAiConfigured()
 
   useEffect(() => {
     setAnalysis(initialAnalysis)
   }, [initialAnalysis])
-
-  useEffect(() => {
-    const normalized = initialProjects.map(normalizeLegacyProject)
-    setProjects(normalized)
-  }, [initialProjects])
 
   async function persistAnalysis(next: JdAnalysis) {
     setAnalysis(next)
@@ -99,50 +80,39 @@ export function JDAnalysisPanel({
     if (companyId) await saveJdAnalysis(companyId, next)
   }
 
-  async function persistProjects(next: ResumeProjectSuggestion[]) {
-    const normalized = next.map(normalizeLegacyProject)
-    setProjects(normalized)
-    onProjectsChange?.(normalized)
-    if (companyId) await saveResumeProjects(companyId, normalized)
-  }
-
-  async function handleAnalyze(useAi: boolean) {
+  async function handleClassify() {
     if (!jdRaw.trim()) {
       setMessage('请先录入 JD 文本')
       return
     }
-    setAnalyzing(true)
+    setClassifying(true)
     setMessage('')
     try {
-      const next = useAi && aiConfigured ? await analyzeJD(jdRaw) : analyzeJDByRules(jdRaw)
+      const next = analyzeJDByRules(jdRaw)
       await persistAnalysis(next)
-      setMessage(useAi && aiConfigured ? 'AI 分析完成' : '规则分类完成')
-    } catch {
-      const fallback = analyzeJDByRules(jdRaw)
-      await persistAnalysis(fallback)
-      setMessage('AI 不可用，已使用规则分析')
+      setMessage('分类完成')
     } finally {
-      setAnalyzing(false)
+      setClassifying(false)
     }
   }
 
-  async function handleGenerateProjects() {
-    if (!analysis && !jdRaw.trim()) return
-    const base = analysis ?? analyzeJDByRules(jdRaw)
-    if (!aiConfigured) {
-      setMessage('请先在设置中配置 Gemini API Key 或 Ollama')
+  async function handleCopyForCursor() {
+    if (!jdRaw.trim()) {
+      setMessage('请先录入 JD 文本')
       return
     }
-    setGenerating(true)
-    setMessage('')
+    const display = analysis ?? analyzeJDByRules(jdRaw)
+    const text = buildCursorProjectPrompt({
+      companyName,
+      position: position || '（未填岗位名）',
+      jdRaw,
+      analysisSummary: buildAnalysisSummary(display),
+    })
     try {
-      const next = await generateResumeProjects(base, position)
-      await persistProjects(next)
-      setMessage(`已生成 ${next.length} 个项目，点击「AI 带我做」开始实战`)
-    } catch (e) {
-      setMessage(e instanceof Error ? e.message : '生成失败')
-    } finally {
-      setGenerating(false)
+      await navigator.clipboard.writeText(text)
+      setMessage('已复制，粘贴到 Cursor 对话即可让我带做项目')
+    } catch {
+      setMessage('复制失败，请检查浏览器剪贴板权限')
     }
   }
 
@@ -151,36 +121,36 @@ export function JDAnalysisPanel({
   return (
     <div className={`jd-analysis${compact ? ' jd-analysis-compact' : ''}`}>
       <div className="panel-head">
-        <h3>职位分析</h3>
+        <h3>职位要求</h3>
         <div className="quick-actions">
-          {analyzing && <span className="muted small">分析中…</span>}
+          {classifying && <span className="muted small">分类中…</span>}
           <button
             className="btn ghost"
             type="button"
-            disabled={analyzing}
-            onClick={() => void handleAnalyze(false)}
+            disabled={classifying || !jdRaw.trim()}
+            onClick={() => void handleClassify()}
           >
             {display ? '重新分类' : '规则分类'}
           </button>
-          {aiConfigured && (
-            <button
-              className="btn ghost"
-              type="button"
-              disabled={analyzing}
-              onClick={() => void handleAnalyze(true)}
-            >
-              重新 AI 分析
-            </button>
-          )}
+          <button
+            className="btn primary"
+            type="button"
+            disabled={!jdRaw.trim()}
+            onClick={() => void handleCopyForCursor()}
+          >
+            复制给 Cursor
+          </button>
         </div>
       </div>
+
+      <p className="hint muted small">
+        粘贴 JD 后会自动规则分类（无需 AI）。做项目：点「复制给 Cursor」，在本对话粘贴即可。
+      </p>
       {message && <p className="hint">{message}</p>}
-      {aiConfigured && aiSettings.autoAnalyze && (
-        <p className="hint muted small">
-          已开启自动 AI 分析 · 引擎：{getProviderLabel(aiSettings.provider)}（可在设置中切换）
-        </p>
+      {!display && jdRaw.trim() && (
+        <p className="muted">正在自动分类… 也可手动点「规则分类」</p>
       )}
-      {!display && <p className="muted">粘贴 JD 后点击「规则分类」，或手动点「AI 分析」</p>}
+      {!display && !jdRaw.trim() && <p className="muted">粘贴 JD 后会显示结构化要求</p>}
 
       {display && (
         <>
@@ -218,10 +188,7 @@ export function JDAnalysisPanel({
               </div>
             )}
             {display.analyzedAt && (
-              <p className="muted small">
-                {display.source === 'ai' ? 'AI' : '规则'}分析于{' '}
-                {new Date(display.analyzedAt).toLocaleString()}
-              </p>
+              <p className="muted small">规则分类于 {new Date(display.analyzedAt).toLocaleString()}</p>
             )}
           </div>
 
@@ -237,56 +204,6 @@ export function JDAnalysisPanel({
               {showCompany && <p className="jd-company-summary">{display.companySummary}</p>}
               {!showCompany && (
                 <p className="jd-company-summary collapsed">{display.companySummary.slice(0, 60)}…</p>
-              )}
-            </div>
-          )}
-
-          {!compact && (
-            <div className="jd-projects-block">
-              <div className="panel-head">
-                <h3>匹配简历项目</h3>
-                <button
-                  className="btn primary"
-                  type="button"
-                  disabled={generating || !jdRaw.trim()}
-                  onClick={() => void handleGenerateProjects()}
-                >
-                  {generating ? '生成中…' : 'AI 生成项目'}
-                </button>
-              </div>
-              <p className="hint">根据 JD 生成可实战的项目，点击「AI 带我做」逐步完成（支持 Gemini / Ollama）</p>
-              {projects.length > 0 && (
-                <div className="project-list">
-                  {projects.map((project) => (
-                    <article key={project.id} className="project-card">
-                      <div className="project-card-head">
-                        <strong>{project.title}</strong>
-                        <div className="quick-actions">
-                          {companyId && (
-                            <Link
-                              className="btn primary"
-                              to={`/company/${companyId}/project/${project.id}`}
-                            >
-                              AI 带我做
-                            </Link>
-                          )}
-                          <button
-                            className="btn ghost"
-                            type="button"
-                            onClick={() => void copyProjectToClipboard(project)}
-                          >
-                            复制简历描述
-                          </button>
-                        </div>
-                      </div>
-                      {project.status === 'done' && <span className="tag success-tag">已完成</span>}
-                      {project.status === 'in_progress' && <span className="tag">进行中</span>}
-                      <p>{project.description}</p>
-                      <TagList items={project.techStack} />
-                      <BulletList items={project.highlights} />
-                    </article>
-                  ))}
-                </div>
               )}
             </div>
           )}

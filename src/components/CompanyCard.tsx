@@ -69,15 +69,6 @@ export function CompanyCard({ company }: Props) {
           {company.location && <span>{company.location}</span>}
           {company.salary && <span>{company.salary}</span>}
         </div>
-        {company.skills.length > 0 && (
-          <div className="tags">
-            {company.skills.slice(0, 5).map((skill) => (
-              <span key={skill} className="tag">
-                {skill}
-              </span>
-            ))}
-          </div>
-        )}
         {deadlineHint && <div className="deadline">{deadlineHint}</div>}
       </Link>
     </div>
