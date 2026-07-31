@@ -20,7 +20,7 @@ export function buildCursorProjectPrompt(opts: {
   ]
 
   if (analysisSummary?.trim()) {
-    parts.push('', '（网站已做的规则分类摘要，供参考）', analysisSummary.trim())
+    parts.push('', '（网站已做的结构分类摘要，供参考）', analysisSummary.trim())
   }
 
   parts.push(
@@ -37,23 +37,21 @@ export function buildCursorProjectPrompt(opts: {
 }
 
 export function buildAnalysisSummary(analysis: {
-  education: string[]
-  experience: string[]
-  hardSkills: string[]
-  softSkills: string[]
-  projectRequirements: string[]
-  responsibilities: string[]
+  responsibilitySections?: Array<{ index: number; title: string; items: string[] }>
+  requirementSections?: Array<{ index: number; title: string; items: string[] }>
+  hardSkills?: string[]
 }): string {
   const lines: string[] = []
-  const section = (title: string, items: string[]) => {
-    if (!items.length) return
-    lines.push(`${title}：${items.join('；')}`)
+
+  for (const block of analysis.responsibilitySections ?? []) {
+    lines.push(`【岗位职责 ${block.index}. ${block.title}】${block.items.join('；')}`)
   }
-  section('学历', analysis.education)
-  section('经验', analysis.experience)
-  section('硬技能', analysis.hardSkills)
-  section('软性', analysis.softSkills)
-  section('项目要求', analysis.projectRequirements)
-  section('岗位职责', analysis.responsibilities)
+  for (const block of analysis.requirementSections ?? []) {
+    lines.push(`【任职要求 ${block.index}. ${block.title}】${block.items.join('；')}`)
+  }
+  if (analysis.hardSkills?.length) {
+    lines.push(`【技术栈】${analysis.hardSkills.join('、')}`)
+  }
+
   return lines.join('\n')
 }

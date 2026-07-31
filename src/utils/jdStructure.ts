@@ -121,6 +121,93 @@ export function splitNumberedBlocks(text: string, maxItems = 8): string[] {
   return dedupeBullets(items).slice(0, maxItems)
 }
 
+/** 解析「1. 标题 + 子项」结构 → 大方块里的小方块 */
+export function parseNumberedSections(text: string, maxSections = 12): import('../types').JdNumberedSection[] {
+  const normalized = text.replace(/\r\n/g, '\n').trim()
+  if (!normalized) return []
+
+  const chunks = normalized.split(/(?=^\s*\d+[.、．)]\s*)/m).filter((c) => c.trim())
+  const sections: import('../types').JdNumberedSection[] = []
+
+  for (const chunk of chunks) {
+    const trimmed = chunk.trim()
+    const head = trimmed.match(/^(\d+)[.、．)]\s*([\s\S]*)$/)
+    if (!head) continue
+
+    const index = parseInt(head[1]!, 10)
+    let content = head[2]!.trim()
+    if (!content) continue
+
+    let title: string
+    let body: string
+
+    const nl = content.indexOf('\n')
+    if (nl === -1) {
+      const inline = content.match(/^(.{2,28}?)[：:]\s*(.+)$/)
+      if (inline && inline[2]!.length >= 8) {
+        title = inline[1]!.trim()
+        body = inline[2]!.trim()
+      } else {
+        title = content.length <= 16 ? content : content.slice(0, 16).trim()
+        body = content.length <= 16 ? '' : content
+      }
+    } else {
+      title = content.slice(0, nl).trim()
+      body = content.slice(nl + 1).trim()
+      const titled = title.match(/^(.+?)[：:]\s*(.+)$/)
+      if (titled && titled[2]!.length >= 8) {
+        body = `${titled[2]!.trim()}\n${body}`.trim()
+        title = titled[1]!.trim()
+      }
+    }
+
+    title = title.replace(/[：:]\s*$/, '').trim()
+    const items = extractSectionItems(body)
+
+    sections.push({
+      index,
+      title,
+      items:
+        items.length > 0 ? items
+        : body ? [body.replace(/\n+/g, ' ').trim()]
+        : title.length > 16 ? [title]
+        : [],
+    })
+  }
+
+  return sections.slice(0, maxSections)
+}
+
+function extractSectionItems(body: string): string[] {
+  const combined = body.trim()
+  if (!combined) return []
+
+  if (/[（(]\s*\d+\s*[)）]/.test(combined)) {
+    const parts = combined
+      .split(/[（(]\s*\d+\s*[)）]\s*/)
+      .map((s) => s.trim().replace(/\s+/g, ' '))
+      .filter((s) => s.length >= 4)
+    if (parts.length >= 1) return dedupeBullets(parts)
+  }
+
+  if (/[；;]/.test(combined)) {
+    const semi = combined
+      .split(/[；;]+/)
+      .map((s) => s.trim())
+      .filter((s) => s.length >= 6)
+    if (semi.length >= 2) return dedupeBullets(semi)
+  }
+
+  const lines = combined
+    .split(/\n/)
+    .map((l) => l.trim().replace(/^[-·•*\d.、)）\s]+/, ''))
+    .filter((l) => l.length >= 4)
+  if (lines.length >= 2) return dedupeBullets(lines)
+
+  const one = combined.replace(/\n+/g, ' ').trim()
+  return one.length >= 4 ? dedupeBullets([one]) : []
+}
+
 /** 解析任职要求内的 1.学历 2.技能 3.软性 4.经验 */
 export function parseRequirementParts(reqBlock: string): RequirementParts {
   const empty: RequirementParts = {

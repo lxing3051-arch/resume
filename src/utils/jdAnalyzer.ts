@@ -1,17 +1,10 @@
 import type { JdAnalysis } from '../types'
 import { filterHardSkills, filterJobDescTags } from './jdFilters'
-import {
-  dedupeAcrossSections,
-  dedupeBullets,
-  isProjectRequirementLine,
-  stripTaggedSummaries,
-} from './jdDedupe'
 import { type RequirementParts } from './jdParser'
 import {
   extractSkillsFromSection,
+  parseNumberedSections,
   parseStructuredJD,
-  splitNumberedBlocks,
-  splitSoftSkillItems,
 } from './jdStructure'
 import { jdRawFingerprint } from './jdFingerprint'
 
@@ -27,102 +20,62 @@ function summarizeCompany(intro: string): string {
   return oneLine.length < intro.length ? `${oneLine}…` : oneLine
 }
 
-/** 按分号/换行拆句（Boss「经验」段常为一整段用；分隔） */
-function splitSentences(text: string): string[] {
-  if (!text.trim()) return []
-  return text
-    .split(/[；;\n]+/)
-    .map((s) =>
-      s
-        .trim()
-        .replace(/^[-·•*\d.、)）\s]+/, '')
-        .replace(/^经验[：:\s]*/, ''),
-    )
-    .filter((s) => s.length >= 6 && s.length < 400)
+function emptyLegacyArrays() {
+  return {
+    education: [] as string[],
+    experience: [] as string[],
+    hardSkills: [] as string[],
+    softSkills: [] as string[],
+    projectRequirements: [] as string[],
+    responsibilities: [] as string[],
+    requirements: [] as string[],
+  }
 }
 
-function bulletFromBlock(text: string): string[] {
-  if (!text.trim()) return []
-  const numbered = splitNumberedBlocks(text, 6)
-  if (numbered.length >= 2) return dedupeBullets(numbered)
-
-  const sentences = splitSentences(text)
-  if (sentences.length >= 2) return dedupeBullets(sentences)
-
-  const lines = text
-    .split(/\n/)
-    .map((l) => l.trim().replace(/^[-·•*\d.、)）\s]+/, '').replace(/^经验[：:\s]*/, ''))
-    .filter((l) => l.length >= 6 && l.length < 300)
-  return dedupeBullets(lines.length ? lines : [text.trim()]).slice(0, 8)
-}
-
-/** 经验段拆成：一般实习经验 vs 项目/作品要求（互斥） */
-function splitExperienceBlock(experienceBlock: string): {
-  experience: string[]
-  projectRequirements: string[]
-} {
-  const all = dedupeBullets(bulletFromBlock(experienceBlock))
-  const projectRequirements = all.filter(isProjectRequirementLine)
-  const experience = all.filter((l) => !isProjectRequirementLine(l))
-  return { experience, projectRequirements }
-}
-
-/** 纯规则分类：按 Boss 段落结构拆栏，各栏互不重复 */
+/** 按 Boss 结构：岗位职责 + 任职要求，各含 1.2.3. 编号小块 */
 export function analyzeJDByRules(jdRaw: string, options: AnalyzeOptions = {}): JdAnalysis {
   const structured = parseStructuredJD(jdRaw, filterJobDescTags(options.skillTags ?? []))
 
-  const parts = {
-    education:
-      options.requirementParts?.education?.trim() || structured.requirementParts.education,
-    skills: options.requirementParts?.skills?.trim() || structured.requirementParts.skills,
-    softSkills:
-      options.requirementParts?.softSkills?.trim() || structured.requirementParts.softSkills,
-    experience:
-      options.requirementParts?.experience?.trim() || structured.requirementParts.experience,
+  let respText = structured.responsibilities
+  let reqText = structured.requirements
+
+  if (options.requirementParts) {
+    const p = options.requirementParts
+    if (p.education || p.skills || p.softSkills || p.experience) {
+      reqText = [
+        p.education && `1.学历与专业\n${p.education}`,
+        p.skills && `2.技能\n${p.skills}`,
+        p.softSkills && `3.软性素质\n${p.softSkills}`,
+        p.experience && `4.经验\n${p.experience}`,
+      ]
+        .filter(Boolean)
+        .join('\n\n')
+    }
   }
 
-  const responsibilityItems =
-    options.responsibilityItems?.length ?
-      options.responsibilityItems
-    : structured.responsibilityItems
+  let responsibilitySections = parseNumberedSections(respText)
+  let requirementSections = parseNumberedSections(reqText)
 
-  const { experience, projectRequirements } = splitExperienceBlock(parts.experience)
+  if (!responsibilitySections.length && respText.trim()) {
+    responsibilitySections = [{ index: 1, title: '岗位职责', items: [respText.replace(/\n+/g, ' ').trim()] }]
+  }
+  if (!requirementSections.length && reqText.trim()) {
+    requirementSections = [{ index: 1, title: '任职要求', items: [reqText.replace(/\n+/g, ' ').trim()] }]
+  }
 
-  const hasStructuredGrid = Boolean(
-    parts.education ||
-      parts.skills ||
-      parts.softSkills ||
-      parts.experience ||
-      responsibilityItems.length,
+  const skillBlock = requirementSections.find((s) => /技能/.test(s.title))
+  const hardSkills = filterHardSkills(
+    extractSkillsFromSection(
+      skillBlock?.items.join('\n') ?? '',
+      filterJobDescTags(options.skillTags ?? []),
+    ),
   )
 
-  const merged = dedupeAcrossSections({
-    education: dedupeBullets(bulletFromBlock(parts.education)),
-    projectRequirements,
-    experience,
-    softSkills: dedupeBullets(splitSoftSkillItems(parts.softSkills)),
-    hardSkills: filterHardSkills(
-      extractSkillsFromSection(parts.skills, filterJobDescTags(options.skillTags ?? [])),
-    ),
-    responsibilities: dedupeBullets(
-      responsibilityItems.length ?
-        responsibilityItems
-      : bulletFromBlock(structured.responsibilities),
-    ),
-    requirements:
-      hasStructuredGrid ?
-        []
-      : stripTaggedSummaries(dedupeBullets(bulletFromBlock(structured.requirements))),
-  })
-
   return {
-    education: merged.education ?? [],
-    experience: merged.experience ?? [],
-    hardSkills: merged.hardSkills ?? [],
-    softSkills: merged.softSkills ?? [],
-    projectRequirements: merged.projectRequirements ?? [],
-    responsibilities: merged.responsibilities ?? [],
-    requirements: merged.requirements ?? [],
+    responsibilitySections,
+    requirementSections,
+    ...emptyLegacyArrays(),
+    hardSkills,
     companySummary: summarizeCompany(structured.companyIntro),
     analyzedAt: new Date().toISOString(),
     source: 'rules',
@@ -132,17 +85,22 @@ export function analyzeJDByRules(jdRaw: string, options: AnalyzeOptions = {}): J
 
 export function emptyJdAnalysis(): JdAnalysis {
   return {
-    education: [],
-    experience: [],
-    hardSkills: [],
-    softSkills: [],
-    projectRequirements: [],
-    responsibilities: [],
-    requirements: [],
+    responsibilitySections: [],
+    requirementSections: [],
+    ...emptyLegacyArrays(),
     companySummary: '',
   }
 }
 
 export function mergeSkillsFromAnalysis(analysis: JdAnalysis, existing: string[]): string[] {
   return filterHardSkills([...existing, ...analysis.hardSkills])
+}
+
+/** 旧版分析无 sections 时，用 jdRaw 重算 */
+export function ensureStructuredAnalysis(analysis: JdAnalysis | undefined, jdRaw: string): JdAnalysis {
+  if (analysis?.responsibilitySections?.length || analysis?.requirementSections?.length) {
+    return analysis
+  }
+  if (!jdRaw.trim()) return analysis ?? emptyJdAnalysis()
+  return analyzeJDByRules(jdRaw)
 }

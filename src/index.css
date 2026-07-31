@@ -950,6 +950,50 @@ code {
   color: var(--primary);
 }
 
+.jd-major-block {
+  margin-bottom: 20px;
+  padding: 16px;
+  background: var(--surface-muted);
+  border-radius: 12px;
+  border: 1px solid var(--border-light);
+}
+
+.jd-major-block .jd-block-title {
+  margin-bottom: 14px;
+  font-size: 1.1rem;
+}
+
+.jd-numbered-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 12px;
+}
+
+.jd-numbered-card {
+  background: var(--surface);
+  border-radius: 10px;
+  padding: 14px;
+  border: 1px solid var(--border-light);
+  border-left: 3px solid var(--primary);
+}
+
+.jd-numbered-card h4 {
+  margin: 0 0 10px;
+  font-size: 0.95rem;
+  color: var(--text);
+  line-height: 1.4;
+}
+
+.jd-skills-row {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px dashed var(--border-light);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
 .jd-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));

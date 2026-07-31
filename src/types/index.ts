@@ -106,8 +106,20 @@ export interface GeminiSettings {
   model: string
 }
 
+/** Boss JD 编号小节：大方块里的一小块（如 1. 学历与专业） */
+export interface JdNumberedSection {
+  index: number
+  title: string
+  items: string[]
+}
+
 /** AI/规则 结构化 JD 分析 */
 export interface JdAnalysis {
+  /** 岗位职责：1. 2. 3. … 各为一小块 */
+  responsibilitySections: JdNumberedSection[]
+  /** 任职要求：1.学历 2.技能 … 各为一小块 */
+  requirementSections: JdNumberedSection[]
+  /** @deprecated 旧版扁平字段，新分析不再填充，仅兼容旧备份 */
   education: string[]
   experience: string[]
   hardSkills: string[]
@@ -118,7 +130,6 @@ export interface JdAnalysis {
   companySummary: string
   analyzedAt?: string
   source?: 'ai' | 'rules'
-  /** 分析时对应的 JD 指纹，用于判断是否需要重新分析 */
   jdRawFingerprint?: string
 }
 

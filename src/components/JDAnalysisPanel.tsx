@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
-import type { JdAnalysis } from '../types'
-import { analyzeJDByRules } from '../utils/jdAnalyzer'
+import type { JdAnalysis, JdNumberedSection } from '../types'
+import { analyzeJDByRules, ensureStructuredAnalysis } from '../utils/jdAnalyzer'
 import { saveJdAnalysis } from '../utils/jdAnalysisService'
 import { buildAnalysisSummary, buildCursorProjectPrompt } from '../utils/cursorPrompt'
 
@@ -12,7 +12,6 @@ interface Props {
   companyId?: number
   onAnalysisChange?: (analysis: JdAnalysis) => void
   compact?: boolean
-  /** 详情页打开时用最新规则重算（修正旧缓存里的重复分类） */
   autoRefresh?: boolean
 }
 
@@ -27,32 +26,18 @@ function BulletList({ items }: { items: string[] }) {
   )
 }
 
-function TagList({ items }: { items: string[] }) {
-  if (!items.length) return <p className="muted small">暂无</p>
+function NumberedCards({ sections }: { sections: JdNumberedSection[] }) {
+  if (!sections.length) return <p className="muted small">暂无</p>
   return (
-    <div className="jd-tag-list">
-      {items.map((item) => (
-        <span key={item} className="tag">
-          {item}
-        </span>
+    <div className="jd-numbered-grid">
+      {sections.map((section) => (
+        <article key={`${section.index}-${section.title}`} className="jd-numbered-card">
+          <h4>
+            {section.index}. {section.title}
+          </h4>
+          <BulletList items={section.items} />
+        </article>
       ))}
-    </div>
-  )
-}
-
-function JdSection({
-  title,
-  children,
-  highlight,
-}: {
-  title: string
-  children: React.ReactNode
-  highlight?: boolean
-}) {
-  return (
-    <div className={`jd-section${highlight ? ' jd-section-highlight' : ''}`}>
-      <h4>{title}</h4>
-      {children}
     </div>
   )
 }
@@ -67,15 +52,17 @@ export function JDAnalysisPanel({
   compact = false,
   autoRefresh = false,
 }: Props) {
-  const [analysis, setAnalysis] = useState(initialAnalysis)
+  const [analysis, setAnalysis] = useState(() =>
+    ensureStructuredAnalysis(initialAnalysis, jdRaw),
+  )
   const [classifying, setClassifying] = useState(false)
   const [message, setMessage] = useState('')
   const [showRaw, setShowRaw] = useState(false)
   const [showCompany, setShowCompany] = useState(false)
 
   useEffect(() => {
-    setAnalysis(initialAnalysis)
-  }, [initialAnalysis])
+    setAnalysis(ensureStructuredAnalysis(initialAnalysis, jdRaw))
+  }, [initialAnalysis, jdRaw])
 
   useEffect(() => {
     if (!autoRefresh || !jdRaw.trim()) return
@@ -130,7 +117,7 @@ export function JDAnalysisPanel({
   return (
     <div className={`jd-analysis${compact ? ' jd-analysis-compact' : ''}`}>
       <div className="panel-head">
-        <h3>职位要求</h3>
+        <h3>职位分析</h3>
         <div className="quick-actions">
           {classifying && <span className="muted small">分类中…</span>}
           <button
@@ -153,54 +140,31 @@ export function JDAnalysisPanel({
       </div>
 
       <p className="hint muted small">
-        粘贴 JD 后会自动规则分类（无需 AI）。做项目：点「复制给 Cursor」，在本对话粘贴即可。
+        按 Boss 原文结构分为「岗位职责」「任职要求」两大块，每块内 1. 2. 3. 各为一小格。
       </p>
       {message && <p className="hint">{message}</p>}
-      {!display && jdRaw.trim() && (
-        <p className="muted">正在自动分类… 也可手动点「规则分类」</p>
-      )}
-      {!display && !jdRaw.trim() && <p className="muted">粘贴 JD 后会显示结构化要求</p>}
 
       {display && (
         <>
-          <div className="jd-primary-block">
-            <h3 className="jd-block-title">职位要求（重点）</h3>
-            <div className="jd-grid">
-              {display.education.length > 0 && (
-                <JdSection title="学历与专业">
-                  <BulletList items={display.education} />
-                </JdSection>
-              )}
-              {display.experience.length > 0 && (
-                <JdSection title="经验要求">
-                  <BulletList items={display.experience} />
-                </JdSection>
-              )}
-              {display.hardSkills.length > 0 && (
-                <JdSection title="硬技能 / 技术栈">
-                  <TagList items={display.hardSkills} />
-                </JdSection>
-              )}
-              {display.softSkills.length > 0 && (
-                <JdSection title="软性素质">
-                  <BulletList items={display.softSkills} />
-                </JdSection>
-              )}
-              {display.projectRequirements.length > 0 && (
-                <JdSection title="项目经历要求" highlight>
-                  <BulletList items={display.projectRequirements} />
-                </JdSection>
-              )}
-            </div>
-            {display.responsibilities.length > 0 && (
-              <div className="jd-grid jd-grid-wide">
-                <JdSection title="岗位职责">
-                  <BulletList items={display.responsibilities} />
-                </JdSection>
+          <div className="jd-major-block">
+            <h3 className="jd-block-title">岗位职责</h3>
+            <NumberedCards sections={display.responsibilitySections} />
+          </div>
+
+          <div className="jd-major-block">
+            <h3 className="jd-block-title">任职要求</h3>
+            <NumberedCards sections={display.requirementSections} />
+            {display.hardSkills.length > 0 && (
+              <div className="jd-skills-row">
+                <span className="muted small">提取的技术栈：</span>
+                <div className="jd-tag-list">
+                  {display.hardSkills.map((s) => (
+                    <span key={s} className="tag">
+                      {s}
+                    </span>
+                  ))}
+                </div>
               </div>
-            )}
-            {display.analyzedAt && (
-              <p className="muted small">规则分类于 {new Date(display.analyzedAt).toLocaleString()}</p>
             )}
           </div>
 
@@ -218,6 +182,10 @@ export function JDAnalysisPanel({
                 <p className="jd-company-summary collapsed">{display.companySummary.slice(0, 60)}…</p>
               )}
             </div>
+          )}
+
+          {display.analyzedAt && (
+            <p className="muted small">规则分类于 {new Date(display.analyzedAt).toLocaleString()}</p>
           )}
 
           {!compact && jdRaw && (

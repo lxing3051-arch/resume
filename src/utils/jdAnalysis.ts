@@ -28,6 +28,8 @@ JD 分析：
 function normalizeAnalysis(raw: Partial<JdAnalysis>, jdRaw: string): JdAnalysis {
   const arr = (v: unknown) => (Array.isArray(v) ? v.map(String).filter(Boolean) : [])
   return {
+    responsibilitySections: [],
+    requirementSections: [],
     education: arr(raw.education),
     experience: arr(raw.experience),
     hardSkills: arr(raw.hardSkills),
