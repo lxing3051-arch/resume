@@ -44,7 +44,46 @@ async function scrapeViaInjection(tabId) {
   return data
 }
 
+async function capturePageText(tabId, source) {
+  const results = await chrome.scripting.executeScript({
+    target: { tabId, allFrames: true },
+    func: async () => {
+      await new Promise((resolve) => setTimeout(resolve, 1200))
+      const text = (document.body?.innerText || document.documentElement?.innerText || '')
+        .replace(/\n{3,}/g, '\n\n')
+        .trim()
+      const title = document.querySelector('h1')?.innerText?.trim() || document.title
+      return { text, title, url: location.href }
+    },
+  })
+  const best = results
+    .map((item) => item.result)
+    .filter((item) => item?.text?.length > 80)
+    .sort((a, b) => b.text.length - a.text.length)[0]
+  if (!best) return { ok: false, error: '页面职位内容尚未加载，请等待 2 秒后重试' }
+
+  const company = source === 'bytedance' ? '字节跳动' : source === 'tencent' ? '腾讯' : ''
+  return {
+    ok: true,
+    data: {
+      source,
+      name: company,
+      position: best.title || '',
+      location: '',
+      salary: '',
+      jdRaw: [`公司：${company}`, `职位：${best.title || ''}`, '', best.text].filter(Boolean).join('\n'),
+      bossUrl: best.url.split('?')[0],
+      requirements: '',
+      responsibilities: '',
+      scrapedAt: new Date().toISOString(),
+    },
+  }
+}
+
 async function scrapeTab(tab) {
+  // 字节职位页常以异步组件或 frame 呈现。直接读取所有 frame 的可见文本最可靠。
+  if (tab.url?.includes('jobs.bytedance.com')) return capturePageText(tab.id, 'bytedance')
+
   // 方式1：向已注入的 content script 发消息
   try {
     const res = await chrome.tabs.sendMessage(tab.id, { type: 'SCRAPE_JOB' })
@@ -59,9 +98,13 @@ async function scrapeTab(tab) {
     const data = await scrapeViaInjection(tab.id)
     if (data?.error) return { ok: false, error: data.error }
     if (data?.jdRaw) return { ok: true, data }
-    return { ok: false, error: '页面无岗位内容' }
+    return capturePageText(tab.id, tab.url?.includes('join.qq.com') ? 'tencent' : 'generic-web')
   } catch (e) {
-    return { ok: false, error: String(e) }
+    try {
+      return await capturePageText(tab.id, tab.url?.includes('join.qq.com') ? 'tencent' : 'generic-web')
+    } catch {
+      return { ok: false, error: String(e) }
+    }
   }
 }
 
