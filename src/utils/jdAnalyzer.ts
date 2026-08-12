@@ -3,9 +3,9 @@ import { filterHardSkills, filterJobDescTags } from './jdFilters'
 import { type RequirementParts } from './jdParser'
 import {
   extractSkillsFromSection,
-  parseNumberedSections,
   parseStructuredJD,
 } from './jdStructure'
+import { buildDedupedSections, extractJobBlocks } from './jdTextSections'
 import { jdRawFingerprint } from './jdFingerprint'
 
 export interface AnalyzeOptions {
@@ -35,9 +35,10 @@ function emptyLegacyArrays() {
 /** 按 Boss 结构：岗位职责 + 任职要求，各含 1.2.3. 编号小块 */
 export function analyzeJDByRules(jdRaw: string, options: AnalyzeOptions = {}): JdAnalysis {
   const structured = parseStructuredJD(jdRaw, filterJobDescTags(options.skillTags ?? []))
+  const genericBlocks = extractJobBlocks(jdRaw)
 
-  let respText = structured.responsibilities
-  let reqText = structured.requirements
+  let respText = genericBlocks.responsibilities || structured.responsibilities
+  let reqText = genericBlocks.requirements || structured.requirements
 
   if (options.requirementParts) {
     const p = options.requirementParts
@@ -53,8 +54,8 @@ export function analyzeJDByRules(jdRaw: string, options: AnalyzeOptions = {}): J
     }
   }
 
-  let responsibilitySections = parseNumberedSections(respText)
-  let requirementSections = parseNumberedSections(reqText)
+  let responsibilitySections = buildDedupedSections(respText, '岗位职责')
+  let requirementSections = buildDedupedSections(reqText, '任职要求')
 
   if (!responsibilitySections.length && respText.trim()) {
     responsibilitySections = [{ index: 1, title: '岗位职责', items: [respText.replace(/\n+/g, ' ').trim()] }]

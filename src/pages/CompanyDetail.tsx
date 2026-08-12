@@ -255,7 +255,7 @@ export default function CompanyDetail() {
         <div className="detail-meta">
           {company.bossUrl && (
             <a href={company.bossUrl} target="_blank" rel="noreferrer">
-              Boss 直聘链接
+              职位链接
             </a>
           )}
         </div>

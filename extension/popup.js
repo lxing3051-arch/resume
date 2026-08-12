@@ -11,27 +11,28 @@ function setStatus(text) {
 }
 
 function isJobPage(url) {
-  if (!url || !url.includes('zhipin.com')) return false
-  return (
-    url.includes('job_detail') ||
-    url.includes('/job/') ||
-    url.includes('geek/job') ||
-    url.includes('jobs/')
-  )
+  if (!url || !/^https?:/i.test(url)) return false
+  try {
+    const { hostname, pathname } = new URL(url)
+    if (hostname.endsWith('join.qq.com') || hostname.endsWith('jobs.bytedance.com')) return true
+    return /job|jobs|position|career|recruit|zhipin/i.test(pathname)
+  } catch {
+    return false
+  }
 }
 
 async function scrapeViaInjection(tabId) {
   await chrome.scripting.executeScript({
     target: { tabId },
-    files: ['scrape-boss.js'],
+    files: ['scrape-job.js'],
   })
   const [{ result: data }] = await chrome.scripting.executeScript({
     target: { tabId },
     func: () => {
-      if (typeof window.__SCRAPE_BOSS_ZHIPIN__ === 'function') {
-        return window.__SCRAPE_BOSS_ZHIPIN__()
+      if (typeof window.__SCRAPE_JOB_PAGE__ === 'function') {
+        return window.__SCRAPE_JOB_PAGE__()
       }
-      return { error: '抓取脚本未加载，请刷新 Boss 页面后重试' }
+      return { error: '抓取脚本未加载，请刷新职位页面后重试' }
     },
   })
   return data
@@ -60,13 +61,13 @@ async function scrapeTab(tab) {
 
 async function scrapeActiveTab() {
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true })
-  if (!tab?.id || !tab.url?.includes('zhipin.com')) {
-    setStatus('请先打开 Boss 直聘网站')
+  if (!tab?.id || !/^https?:/i.test(tab.url || '')) {
+    setStatus('请先打开招聘网站或企业官网的职位页面')
     return
   }
 
   if (!isJobPage(tab.url)) {
-    setStatus('请打开「岗位详情页」（URL 通常含 job_detail），不是搜索列表页')
+    setStatus('请打开具体职位详情页，而不是招聘首页或搜索列表')
     return
   }
 
@@ -74,7 +75,7 @@ async function scrapeActiveTab() {
 
   const res = await scrapeTab(tab)
   if (!res.ok) {
-    setStatus(res.error || '抓取失败。请登录 Boss、刷新页面后重试')
+    setStatus(res.error || '抓取失败。请刷新职位页面后重试')
     return
   }
 

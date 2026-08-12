@@ -8,7 +8,7 @@ export interface RequirementPartsPayload {
 }
 
 export interface ExtensionImportPayload {
-  source: 'boss-zhipin'
+  source: 'boss-zhipin' | 'tencent' | 'bytedance' | 'generic-web'
   name: string
   position: string
   location?: string
@@ -43,5 +43,8 @@ export function decodeImportPayload(text: string): ExtensionImportPayload | null
 export function isExtensionImportPayload(value: unknown): value is ExtensionImportPayload {
   if (!value || typeof value !== 'object') return false
   const p = value as ExtensionImportPayload
-  return p.source === 'boss-zhipin' && typeof p.jdRaw === 'string'
+  return (
+    ['boss-zhipin', 'tencent', 'bytedance', 'generic-web'].includes(p.source) &&
+    typeof p.jdRaw === 'string'
+  )
 }

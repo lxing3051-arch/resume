@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "秋招助手 - Boss直聘采集",
-  "description": "一键抓取 Boss 直聘岗位 JD，导入秋招助手（零成本本地工具）",
-  "version": "1.2.1",
+  "name": "秋招助手 - 职位采集",
+  "description": "一键抓取招聘网站和企业官网职位信息，导入秋招助手",
+  "version": "1.3.0",
   "permissions": ["activeTab", "clipboardWrite", "storage", "scripting"],
   "host_permissions": [
     "https://www.zhipin.com/*",

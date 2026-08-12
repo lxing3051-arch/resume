@@ -123,7 +123,7 @@ export default function Settings() {
       <section className="panel">
         <h2>做项目（Cursor 带做）</h2>
         <p className="hint">
-          本网站不再内置 AI 分析。在公司详情页粘贴 JD 后，点「复制给 Cursor」，把内容粘贴到 Cursor 对话里，让 AI
+          本网站不再内置 AI 分析。在公司详情页粘贴 JD 后，点「复制」，再把内容粘贴到任意 AI 对话中，让 AI
           帮你选题、设计项目并一步步带做代码。
         </p>
       </section>

@@ -180,7 +180,7 @@ export function CompanyForm({
             <input type="date" value={form.deadline} onChange={(e) => update({ deadline: e.target.value })} />
           </label>
           <label className="field">
-            <span>Boss 链接（选填）</span>
+            <span>职位链接（选填）</span>
             <input value={form.bossUrl} onChange={(e) => update({ bossUrl: e.target.value })} />
           </label>
           <label className="field">

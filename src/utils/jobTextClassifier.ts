@@ -2,6 +2,7 @@ import type { CompanyFormData } from './companyForm'
 import type { JdNumberedSection } from '../types'
 import { analyzeJDByRules, mergeSkillsFromAnalysis } from './jdAnalyzer'
 import { parseJDText } from './jdParser'
+import { buildDedupedSections } from './jdTextSections'
 
 export type JobTextSource = 'boss' | 'liepin' | 'lagou' | 'generic'
 
@@ -90,12 +91,7 @@ function metadataFromText(text: string) {
 }
 
 function toSection(title: string, text: string): JdNumberedSection[] {
-  const items = text
-    .split('\n')
-    .map((line) => line.replace(/^\s*(?:[-•·]|\d+[.、)）])\s*/, '').trim())
-    .filter((line) => line.length >= 4)
-    .slice(0, 8)
-  return items.length ? [{ index: 1, title, items }] : []
+  return buildDedupedSections(text, title)
 }
 
 /** 将任意招聘网站、聊天记录或邮件中复制的职位文本归类为表单字段。 */

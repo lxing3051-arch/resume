@@ -106,7 +106,7 @@ export function JDAnalysisPanel({
     })
     try {
       await navigator.clipboard.writeText(text)
-      setMessage('已复制，粘贴到 Cursor 对话即可让我带做项目')
+      setMessage('已复制到剪贴板')
     } catch {
       setMessage('复制失败，请检查浏览器剪贴板权限')
     }
@@ -134,7 +134,7 @@ export function JDAnalysisPanel({
             disabled={!jdRaw.trim()}
             onClick={() => void handleCopyForCursor()}
           >
-            复制给 Cursor
+            复制
           </button>
         </div>
       </div>
