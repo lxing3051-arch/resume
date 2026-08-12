@@ -2,6 +2,7 @@ import type { CompanyFormData } from '../utils/companyForm'
 import { importFromClipboard } from '../utils/extensionBridge'
 import { analyzeJDByRules, mergeSkillsFromAnalysis } from '../utils/jdAnalyzer'
 import { parseJDText } from '../utils/jdParser'
+import { classifyJobText } from '../utils/jobTextClassifier'
 import { recognizeImage } from '../utils/ocr'
 import { JDAnalysisPanel } from './JDAnalysisPanel'
 import type { ResumeVersion, Season } from '../types'
@@ -20,8 +21,10 @@ interface Props {
 function applyParsed(
   form: CompanyFormData,
   text: string,
-  parsed: ReturnType<typeof parseJDText>,
 ): Partial<CompanyFormData> {
+  const classified = classifyJobText(text, form)
+  if (classified) return classified.patch
+  const parsed = parseJDText(text)
   const skills = parsed.skills.length ? parsed.skills : form.skills
   const analysis = analyzeJDByRules(text)
   const mergedSkills = mergeSkillsFromAnalysis(analysis, skills)
@@ -61,7 +64,7 @@ export function CompanyForm({
     setOcrProgress(0)
     try {
       const text = await recognizeImage(file, setOcrProgress)
-      update(applyParsed(form, text, parseJDText(text)))
+      update(applyParsed(form, text))
     } finally {
       setOcrProgress(null)
     }
@@ -76,7 +79,7 @@ export function CompanyForm({
       update({ jdAnalysis: undefined })
       return
     }
-    update(applyParsed(formRef.current, text, parseJDText(text)))
+    update(applyParsed(formRef.current, text))
   }
 
   useEffect(() => {
@@ -92,11 +95,11 @@ export function CompanyForm({
     try {
       const patch = await importFromClipboard(form)
       if (!patch) {
-        setImportHint('剪贴板无插件数据，请先用 Boss 插件复制')
+        setImportHint('剪贴板中没有可识别的招聘文本，请先复制职位信息后重试')
         return
       }
       update(patch)
-      setImportHint('已从剪贴板导入 Boss 直聘数据')
+      setImportHint('已从剪贴板导入并自动分类职位信息')
     } catch {
       setImportHint('无法读取剪贴板，请检查浏览器权限')
     }
@@ -109,12 +112,12 @@ export function CompanyForm({
           <h2>录入 JD</h2>
           <div className="quick-actions">
             <button className="btn primary" type="button" onClick={() => void handleClipboardImport()}>
-              从剪贴板导入（插件）
+              从剪贴板智能导入
             </button>
           </div>
           {importHint && <p className="hint">{importHint}</p>}
           <p className="hint">
-            推荐：安装 <code>extension</code> 浏览器插件，在 Boss 直聘一键抓取（比 OCR 更准）。
+            支持 Boss、猎聘、拉勾、官网、邮件和聊天记录中的职位文本；插件导入仍可继续使用。
           </p>
           <h3 className="section-title">截图 OCR（备选）</h3>
           <label className="upload-box">
@@ -127,13 +130,13 @@ export function CompanyForm({
             <span>{ocrProgress !== null ? `识别中 ${ocrProgress}%` : '点击上传截图'}</span>
           </label>
           <label className="field">
-            <span>或粘贴 JD 文本</span>
+            <span>粘贴任意职位文本</span>
             <textarea
               rows={8}
               value={form.jdRaw}
               onChange={(e) => handleJdRawChange(e.target.value)}
               onBlur={() => runJdParse(form.jdRaw)}
-              placeholder="从 Boss 直聘复制岗位描述粘贴到这里..."
+              placeholder="直接粘贴职位页面、招聘邮件或聊天记录，系统会自动识别并分类..."
             />
           </label>
         </section>

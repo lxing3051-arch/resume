@@ -106,7 +106,7 @@ export default function CompanyNew() {
       <div className="page-header">
         <div>
           <h1>添加公司</h1>
-          <p className="muted">Boss 插件一键导入 · 粘贴 JD · 复制给 Cursor 带做项目</p>
+          <p className="muted">智能识别剪贴板 · 粘贴任意 JD · 自动分类关键信息</p>
           {extensionNotice && <p className="hint success-hint">{extensionNotice}</p>}
           {saveError && <p className="hint error-hint">{saveError}</p>}
         </div>

@@ -1,6 +1,7 @@
 import type { CompanyFormData } from './companyForm'
 import { parseJDText, pickSectionText } from './jdParser'
 import { analyzeJDByRules, mergeSkillsFromAnalysis } from './jdAnalyzer'
+import { classifyJobText } from './jobTextClassifier'
 import {
   decodeImportPayload,
   isExtensionImportPayload,
@@ -90,8 +91,8 @@ export async function importFromClipboard(
   if (!navigator.clipboard?.readText) return null
   const text = await navigator.clipboard.readText()
   const payload = decodeImportPayload(text)
-  if (!payload) return null
-  return extensionPayloadToForm(payload, current)
+  if (payload) return extensionPayloadToForm(payload, current)
+  return classifyJobText(text, current)?.patch ?? null
 }
 
 export function dispatchExtensionImport(payload: ExtensionImportPayload) {
