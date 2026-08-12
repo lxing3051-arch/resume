@@ -4,6 +4,22 @@ import './index.css'
 
 const rootElement = document.getElementById('root')
 
+/**
+ * 旧版本曾注册 PWA Service Worker。它可能把 GitHub Pages 的新旧资源混用，
+ * 从而造成模块加载失败和白屏；职位数据保存在 IndexedDB，不会被清除。
+ */
+async function removeLegacyServiceWorker() {
+  if (!('serviceWorker' in navigator)) return
+  const registrations = await navigator.serviceWorker.getRegistrations()
+  if (!registrations.length) return
+  await Promise.all(registrations.map((registration) => registration.unregister()))
+  if ('caches' in window) {
+    await Promise.all((await caches.keys()).map((key) => caches.delete(key)))
+  }
+  window.location.reload()
+  throw new Error('正在更新应用资源，请稍后重试')
+}
+
 function showStartupError(error: unknown) {
   const message = error instanceof Error ? error.message : String(error)
   if (!rootElement) return
@@ -19,11 +35,11 @@ function showStartupError(error: unknown) {
   rootElement.querySelector('button')?.addEventListener('click', () => window.location.reload())
 }
 
-void Promise.all([
+void removeLegacyServiceWorker().then(() => Promise.all([
   import('./utils/extensionBridge'),
   import('./App.tsx'),
   import('./utils/theme'),
-])
+]))
   .then(([, appModule, themeModule]) => {
     if (!rootElement) throw new Error('找不到应用挂载节点')
     themeModule.initTheme()
