@@ -6,6 +6,15 @@ const copyBtn = document.getElementById('copyBtn')
 
 let payload = null
 
+// 字节招聘职位页的正文后面会拼接“相关职位”推荐和整站页脚。
+// 仅保留这些尾部区域开始前的内容，避免推荐岗位、联系方式等无关内容进入 JD。
+function trimRecruitingTail(text) {
+  const normalized = (text || '').replace(/\n{3,}/g, '\n\n').trim()
+  const tailStart = /(?:^|\n)\s*(?:[•·●▪◦-]\s*)?(?:相关职位|职位\s*ID\s*[：:]|关注我们获取最新动态|联系我们|相关网站|候选人反馈平台|官网使用体验反馈|字节跳动招聘|京公网安备|版权所有)\s*(?:\n|$)/im
+  const match = normalized.match(tailStart)
+  return (match?.index === undefined ? normalized : normalized.slice(0, match.index)).trim()
+}
+
 function setStatus(text) {
   statusEl.textContent = text
 }
@@ -49,9 +58,12 @@ async function capturePageText(tabId, source) {
     target: { tabId, allFrames: true },
     func: async () => {
       await new Promise((resolve) => setTimeout(resolve, 1200))
-      const text = (document.body?.innerText || document.documentElement?.innerText || '')
+      const rawText = (document.body?.innerText || document.documentElement?.innerText || '')
         .replace(/\n{3,}/g, '\n\n')
         .trim()
+      const tailStart = /(?:^|\n)\s*(?:[•·●▪◦-]\s*)?(?:相关职位|职位\s*ID\s*[：:]|关注我们获取最新动态|联系我们|相关网站|候选人反馈平台|官网使用体验反馈|字节跳动招聘|京公网安备|版权所有)\s*(?:\n|$)/im
+      const match = rawText.match(tailStart)
+      const text = (match?.index === undefined ? rawText : rawText.slice(0, match.index)).trim()
       const title = document.querySelector('h1')?.innerText?.trim() || document.title
       return { text, title, url: location.href }
     },

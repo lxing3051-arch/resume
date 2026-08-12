@@ -23,12 +23,8 @@ function isAppTab(url) {
   )
 }
 
-function isCompanyNewPage(url) {
-  return url && url.includes('/company/new')
-}
-
-function buildNewCompanyUrl(appUrl) {
-  return `${appUrl}/company/new`
+function buildAppRootUrl(appUrl) {
+  return `${appUrl}/`
 }
 
 function waitForTabComplete(tabId) {
@@ -71,6 +67,12 @@ async function deliverViaMainWorld(tabId, payload) {
           } catch {
             /* ignore */
           }
+          // GitHub Pages 对 /company/new 这类深链接返回 404，先打开首页后由前端路由跳转。
+          if (!window.location.pathname.endsWith('/company/new')) {
+            const basePath = window.location.pathname.replace(/\/+$/, '')
+            window.history.pushState({}, '', `${basePath}/company/new`)
+            window.dispatchEvent(new PopStateEvent('popstate'))
+          }
           window.postMessage({ type: 'JOB_TRACKER_IMPORT', payload: data }, window.location.origin)
           window.dispatchEvent(new CustomEvent('job-tracker-import', { detail: data }))
           if (window.__JOB_TRACKER__?.dispatchImport) {
@@ -94,7 +96,7 @@ async function deliverImport(tabId, payload) {
 
 async function openAppWithImport(payload) {
   const appUrl = await getAppUrl()
-  const target = buildNewCompanyUrl(appUrl)
+  const target = buildAppRootUrl(appUrl)
 
   await chrome.storage.session.set({ pendingImport: payload })
 
@@ -106,7 +108,7 @@ async function openAppWithImport(payload) {
   if (appTab?.id != null) {
     tabId = appTab.id
     await chrome.tabs.update(tabId, { active: true })
-    if (!isCompanyNewPage(appTab.url)) {
+    if (appTab.url !== target) {
       await chrome.tabs.update(tabId, { url: target })
       await waitForTabComplete(tabId)
     } else {
