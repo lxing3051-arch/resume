@@ -29,6 +29,19 @@ function scrapeJobPage() {
     }
     return ''
   }
+  const sectionAfterHeading = (labels) => {
+    const candidates = document.querySelectorAll('h2, h3, h4, strong, [class*="title"], [class*="Title"]')
+    for (const heading of candidates) {
+      if (!labels.includes(textOf(heading).replace(/[：:]$/, ''))) continue
+      const sibling = heading.nextElementSibling
+      const siblingText = blockOf(sibling)
+      if (siblingText.length > 40) return siblingText
+      const parent = heading.parentElement
+      const parentText = blockOf(parent)
+      if (parentText.length > 60) return parentText.replace(blockOf(heading), '').trim()
+    }
+    return ''
+  }
 
   function jobPostingFromJsonLd() {
     const nodes = []
@@ -49,7 +62,11 @@ function scrapeJobPage() {
   const url = location.href.split('?')[0]
   const host = location.hostname
   const jsonJob = jobPostingFromJsonLd()
-  const bodyText = blockOf(document.body)
+  const shadowText = [...document.querySelectorAll('*')]
+    .map((element) => element.shadowRoot ? blockOf(element.shadowRoot) : '')
+    .filter((text) => text.length > 40)
+    .join('\n')
+  const bodyText = [blockOf(document.body), shadowText].filter(Boolean).join('\n')
   const source = host.includes('zhipin.com')
     ? 'boss-zhipin'
     : host.includes('bytedance.com')
@@ -74,11 +91,18 @@ function scrapeJobPage() {
     /(?:薪资|薪酬|待遇)\s*[：:]?\s*([^\n]+)/i,
     /\b((?:\d{1,3}\s*[-~－至]\s*\d{1,3}|\d{1,3})\s*[kK](?:\s*[·・]\s*\d{1,2}薪)?)\b/,
   ])
-  const description = htmlToText(jsonJob?.description) || pickBlock(
+  const bytedanceDescription = host.includes('bytedance.com')
+    ? [
+        sectionAfterHeading(['职位描述', '岗位职责', '工作内容']),
+        sectionAfterHeading(['职位要求', '任职要求', '岗位要求']),
+      ].filter(Boolean).join('\n\n')
+    : ''
+  const description = htmlToText(jsonJob?.description) || bytedanceDescription || pickBlock(
     '.job-sec-text', '.job-detail-body', '.job-description', '.job-desc',
     '[class*="job-description"]', '[class*="jobDescription"]',
     '[class*="position-detail"]', '[class*="positionDetail"]',
-    '[class*="job-content"]', '[class*="detail-content"]', 'main article',
+    '[class*="job-content"]', '[class*="jobContent"]', '[class*="detail-content"]',
+    '[class*="description"]', '[class*="requirement"]', 'main article',
   )
 
   const jdBody = description || bodyText.slice(0, 16000)

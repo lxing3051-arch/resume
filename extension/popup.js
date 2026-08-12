@@ -28,9 +28,15 @@ async function scrapeViaInjection(tabId) {
   })
   const [{ result: data }] = await chrome.scripting.executeScript({
     target: { tabId },
-    func: () => {
+    func: async () => {
       if (typeof window.__SCRAPE_JOB_PAGE__ === 'function') {
-        return window.__SCRAPE_JOB_PAGE__()
+        let data = window.__SCRAPE_JOB_PAGE__()
+        // 字节等官网采用异步渲染；在内容尚未出现时最多等待 2 秒后重试。
+        for (let attempt = 0; attempt < 4 && (!data?.jdRaw || data.jdRaw.length < 180); attempt++) {
+          await new Promise((resolve) => setTimeout(resolve, 500))
+          data = window.__SCRAPE_JOB_PAGE__()
+        }
+        return data
       }
       return { error: '抓取脚本未加载，请刷新职位页面后重试' }
     },
