@@ -125,7 +125,9 @@ function scrapeJobPage() {
     '[class*="description"]', '[class*="requirement"]', 'main article',
   )
 
-  const jdBody = description || bodyText.slice(0, 16000)
+  // 局部容器有时只包含「职位描述」或只包含「职位要求」。
+  // 合并整页正文后再分段，避免另一块在录入时直接丢失。
+  const jdBody = [description, bodyText].filter(Boolean).join('\n').slice(0, 24000)
   const requirements = first(jdBody, [
     /(?:任职要求|职位要求|岗位要求|任职资格|任职条件)\s*[：:]?\s*([\s\S]*?)(?=\n\s*(?:福利待遇|公司介绍|工作地点)\s*[：:]?|$)/i,
   ])
