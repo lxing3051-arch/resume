@@ -67,6 +67,8 @@ export function extensionPayloadToForm(
     skillTags: payload.skillTags,
     requirementParts: payload.requirementParts,
     responsibilityItems: payload.responsibilityItems,
+    responsibilities: payload.responsibilities,
+    requirements: payload.requirements,
   })
   const mergedSkills = mergeSkillsFromAnalysis(analysis, skills)
 

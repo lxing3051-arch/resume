@@ -69,9 +69,12 @@ export function JDAnalysisPanel({
 
   useEffect(() => {
     if (!autoRefresh || !jdRaw.trim()) return
+    // 插件导入时已保存的分段往往比纯原始网页文本更准确。
+    // 详情页再次按规则解析会把这份结果覆盖成“暂无”，因此仅为旧记录补一次空分析。
+    if (initialAnalysis?.responsibilitySections?.length || initialAnalysis?.requirementSections?.length) return
     const next = analyzeJDByRules(jdRaw)
     void persistAnalysis(next)
-  }, [autoRefresh, jdRaw, companyId])
+  }, [autoRefresh, jdRaw, companyId, initialAnalysis])
 
   async function persistAnalysis(next: JdAnalysis) {
     setAnalysis(next)

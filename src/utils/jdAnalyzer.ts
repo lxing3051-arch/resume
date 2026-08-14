@@ -12,6 +12,8 @@ export interface AnalyzeOptions {
   skillTags?: string[]
   requirementParts?: Partial<RequirementParts>
   responsibilityItems?: string[]
+  responsibilities?: string
+  requirements?: string
 }
 
 function summarizeCompany(intro: string): string {
@@ -40,8 +42,10 @@ export function analyzeJDByRules(jdRaw: string, options: AnalyzeOptions = {}): J
   const hasResponsibilityHeading = lines.some((line) => /^(?:职位描述|岗位描述|工作内容|工作职责|岗位职责|职责描述)\s*[：:]?$/.test(line))
   const hasRequirementHeading = lines.some((line) => /^(?:任职要求|职位要求|岗位要求|任职资格|任职条件)\s*[：:]?$/.test(line))
 
-  let respText = hasResponsibilityHeading ? genericBlocks.responsibilities : structured.responsibilities
-  let reqText = hasRequirementHeading ? genericBlocks.requirements : structured.requirements
+  let respText = options.responsibilities?.trim() ||
+    (hasResponsibilityHeading ? genericBlocks.responsibilities : structured.responsibilities)
+  let reqText = options.requirements?.trim() ||
+    (hasRequirementHeading ? genericBlocks.requirements : structured.requirements)
 
   if (options.requirementParts) {
     const p = options.requirementParts

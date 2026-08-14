@@ -3,6 +3,7 @@ import { importFromClipboard } from '../utils/extensionBridge'
 import { analyzeJDByRules, mergeSkillsFromAnalysis } from '../utils/jdAnalyzer'
 import { parseJDText } from '../utils/jdParser'
 import { classifyJobText } from '../utils/jobTextClassifier'
+import { jdRawFingerprint } from '../utils/jdFingerprint'
 import { recognizeImage } from '../utils/ocr'
 import { JDAnalysisPanel } from './JDAnalysisPanel'
 import type { ResumeVersion, Season } from '../types'
@@ -84,6 +85,8 @@ export function CompanyForm({
 
   useEffect(() => {
     if (!form.jdRaw.trim()) return
+    // 插件导入已附带准确的结构化结果时，不要在 600ms 后又按原始网页文本覆盖它。
+    if (form.jdAnalysis?.jdRawFingerprint === jdRawFingerprint(form.jdRaw)) return
     if (parseTimerRef.current) clearTimeout(parseTimerRef.current)
     parseTimerRef.current = setTimeout(() => runJdParse(form.jdRaw), 600)
     return () => {
