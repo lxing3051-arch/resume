@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "\u79cb\u62db\u52a9\u624b - \u804c\u4f4d\u91c7\u96c6",
   "description": "Capture job details from recruiting websites and import them into Job Tracker.",
-  "version": "1.3.4",
+  "version": "1.3.5",
   "permissions": ["activeTab", "clipboardWrite", "storage", "scripting"],
   "host_permissions": [
     "https://www.zhipin.com/*",
