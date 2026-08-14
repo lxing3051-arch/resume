@@ -84,7 +84,7 @@ function scrapeJobPage() {
     '.company-info h3', '.company-name', '[class*="company-name"]',
     '[class*="companyName"]', '[data-company-name]',
   ) || (host.includes('bytedance.com') ? '字节跳动' : host.includes('qq.com') ? '腾讯' : '')
-  const location = jsonJob?.jobLocation?.address?.addressLocality || pick(
+  const locationText = jsonJob?.jobLocation?.address?.addressLocality || pick(
     '.text-city', '.location-address', '[class*="location"]', '[class*="city"]', '[data-location]',
   ) || first(bodyText, [/(?:工作地点|工作城市|地点|地址)\s*[：:]?\s*([^\n]+)/i])
   const salary = pick('.salary', '[class*="salary"]', '[class*="compensation"]') || first(bodyText, [
@@ -121,7 +121,7 @@ function scrapeJobPage() {
     company && `公司：${company}`,
     title && `职位：${title}`,
     salary && `薪资：${salary}`,
-    location && `地点：${location}`,
+    locationText && `地点：${locationText}`,
     '',
     responsibilities && `岗位职责\n${responsibilities}`,
     requirements && `任职要求\n${requirements}`,
@@ -132,7 +132,7 @@ function scrapeJobPage() {
     source,
     name: company || '',
     position: title || '',
-    location: location || '',
+    location: locationText || '',
     salary: salary || '',
     jdRaw,
     bossUrl: url,
