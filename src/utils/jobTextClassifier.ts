@@ -17,6 +17,7 @@ const REQUIREMENT_HEADING = /^(任职要求|职位要求|岗位要求|任职资�
 const END_OF_JD = /^(?:相关职位|相关推荐|推荐职位|职位推荐|联系我们|相关网站|职位\s*ID|公司地址|投递方式|立即投递|分享|举报)/i
 const ROLE_WORD = /(?:工程师|开发|算法|产品|运营|设计|分析师|专员|顾问|实习生|管培生|经理|研究员|测试|招聘|销售|市场|商务|财务|法务|编辑|策划)/
 const BAD_IDENTITY_TEXT = /(?:核心业务|校园(?:招聘|校招)?|快手校招|加入我们|相关职位|相关网站|联系我们|职位\s*ID|研发平台|广告产品)/
+const GENERIC_POSITION_TEXT = /^(?:核心业务|校园(?:招聘|校招)?|校招|快手校招|加入我们|相关职位|相关网站|联系我们|职位\s*ID|研发平台|广告产品)$/
 
 function clean(text: string): string {
   return text
@@ -67,7 +68,8 @@ function isPlausibleCompany(value: string): boolean {
 }
 
 function isPlausiblePosition(value: string): boolean {
-  return value.length >= 2 && value.length <= 50 && !BAD_IDENTITY_TEXT.test(value) && ROLE_WORD.test(value)
+  const position = value.trim()
+  return position.length >= 2 && position.length <= 80 && !GENERIC_POSITION_TEXT.test(position) && ROLE_WORD.test(position)
 }
 
 function classifyUnheadedLines(text: string): Pick<CompanyFormData, 'responsibilities' | 'requirements'> {

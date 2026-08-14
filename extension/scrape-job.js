@@ -29,15 +29,16 @@ function scrapeJobPage() {
     }
     return ''
   }
-  const ROLE_WORD = /(?:工程师|开发|算法|产品|运营|设计|分析师|专员|顾问|实习生|管培生|经理|研究员|测试|招聘|销售|市场|商务|财务|法务|编辑|策划)/
-  const BAD_JOB_TITLE = /(?:核心业务|校园(?:招聘|校招)?|加入我们|相关职位|相关网站|联系我们|职位\s*ID|公司介绍|招聘首页|职位列表)/
+  const ROLE_WORD = /(?:工程师|开发|算法|产品|运营|设计|分析师|专员|顾问|实习生|管培生|经理|研究员|测试|销售|市场|商务|财务|法务|编辑|策划)/
+  // 仅拦截「校招」这类纯导航标签；真实职位名可以包含“校招”说明。
+  const GENERIC_JOB_TITLE = /^(?:核心业务|校园(?:招聘|校招)?|校招|加入我们|相关职位|相关网站|联系我们|职位\s*ID|公司介绍|招聘首页|职位列表)$/
   const normalizeJobTitle = (value) => {
     const title = clean(value).split('\n')[0]
       .replace(/^(?:职位名称|岗位名称|招聘职位|职位|岗位)\s*[：:]?\s*/, '')
       .replace(/\s*(?:[-|｜]\s*)?(?:字节跳动|ByteDance|腾讯|Tencent|快手|Kuaishou)(?:招聘|校园招聘)?\s*$/i, '')
       .replace(/\s*(?:[-|｜]\s*)?(?:校园招聘|社会招聘|招聘官网)\s*$/i, '')
       .trim()
-    return title.length >= 2 && title.length <= 60 && ROLE_WORD.test(title) && !BAD_JOB_TITLE.test(title)
+    return title.length >= 2 && title.length <= 80 && ROLE_WORD.test(title) && !GENERIC_JOB_TITLE.test(title)
       ? title
       : ''
   }
@@ -96,8 +97,8 @@ function scrapeJobPage() {
     '[class*="job-title"]', '[class*="position-title"]',
     '[class*="jobName"]', 'main h1', 'h1',
   )
-  const title = normalizeJobTitle(jsonJob?.title) || normalizeJobTitle(labelledTitle) ||
-    normalizeJobTitle(selectorTitle) || normalizeJobTitle(document.querySelector('meta[property="og:title"]')?.content) ||
+  const title = normalizeJobTitle(jsonJob?.title) || normalizeJobTitle(selectorTitle) ||
+    normalizeJobTitle(labelledTitle) || normalizeJobTitle(document.querySelector('meta[property="og:title"]')?.content) ||
     normalizeJobTitle(document.title)
   const company = jsonJob?.hiringOrganization?.name || pick(
     '.company-info h3', '.company-name', '[class*="company-name"]',
