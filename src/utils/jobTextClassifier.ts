@@ -14,6 +14,9 @@ export interface JobTextClassification {
 const SECTION_HEADINGS = /^(职位描述|岗位描述|工作内容|工作职责|岗位职责|职责描述|任职要求|职位要求|岗位要求|任职资格|任职条件|我们希望你|你需要具备|福利待遇|公司介绍|关于我们)\s*[：:]?$/
 const RESPONSIBILITY_HEADING = /^(职位描述|岗位描述|工作内容|工作职责|岗位职责|职责描述)\s*[：:]?$/
 const REQUIREMENT_HEADING = /^(任职要求|职位要求|岗位要求|任职资格|任职条件|我们希望你|你需要具备)\s*[：:]?$/
+const END_OF_JD = /^(?:相关职位|相关推荐|推荐职位|职位推荐|联系我们|相关网站|职位\s*ID|公司地址|投递方式|立即投递|分享|举报)/i
+const ROLE_WORD = /(?:工程师|开发|算法|产品|运营|设计|分析师|专员|顾问|实习生|管培生|经理|研究员|测试|招聘|销售|市场|商务|财务|法务|编辑|策划)/
+const BAD_IDENTITY_TEXT = /(?:核心业务|校园(?:招聘|校招)?|快手校招|加入我们|相关职位|相关网站|联系我们|职位\s*ID|研发平台|广告产品)/
 
 function clean(text: string): string {
   return text
@@ -44,10 +47,27 @@ function sectionText(text: string, heading: RegExp): string {
   if (start < 0) return ''
   const result: string[] = []
   for (const line of lines.slice(start + 1)) {
-    if (SECTION_HEADINGS.test(line.trim())) break
+    if (SECTION_HEADINGS.test(line.trim()) || END_OF_JD.test(line.trim())) break
     result.push(line)
   }
   return result.join('\n').trim()
+}
+
+function inferCompanyName(text: string): string {
+  if (/字节跳动|ByteDance/i.test(text)) return '字节跳动'
+  if (/腾讯(?:招聘|校招|实习|公司)?|Tencent/i.test(text)) return '腾讯'
+  if (/快手(?:校园|校招|招聘)?|Kuaishou/i.test(text)) return '快手'
+  if (/阿里巴巴|Alibaba/i.test(text)) return '阿里巴巴'
+  if (/美团(?:招聘|校招)?/i.test(text)) return '美团'
+  return ''
+}
+
+function isPlausibleCompany(value: string): boolean {
+  return value.length >= 2 && value.length <= 30 && !BAD_IDENTITY_TEXT.test(value) && !ROLE_WORD.test(value)
+}
+
+function isPlausiblePosition(value: string): boolean {
+  return value.length >= 2 && value.length <= 50 && !BAD_IDENTITY_TEXT.test(value) && ROLE_WORD.test(value)
 }
 
 function classifyUnheadedLines(text: string): Pick<CompanyFormData, 'responsibilities' | 'requirements'> {
@@ -81,10 +101,13 @@ function metadataFromText(text: string) {
   ])
 
   // 常见复制格式："公司名 · 职位名"、"公司名 | 职位名"。
-  const pair = lines.slice(0, 6).map((line) => line.match(/^(.{2,40}?)\s*(?:[·|｜—–-]|\/)\s*(.{2,50})$/)).find(Boolean)
+  const pair = lines
+    .slice(0, 8)
+    .map((line) => line.match(/^(.{2,40}?)\s*(?:[·|｜—–-]|\/)\s*(.{2,50})$/))
+    .find((match) => Boolean(match && isPlausibleCompany(match[1].trim()) && isPlausiblePosition(match[2].trim())))
   return {
-    name: name || pair?.[1]?.trim() || '',
-    position: position || pair?.[2]?.trim() || '',
+    name: isPlausibleCompany(name) ? name : (pair?.[1]?.trim() || inferCompanyName(text)),
+    position: isPlausiblePosition(position) ? position : (pair?.[2]?.trim() || ''),
     location: location.replace(/^(工作地点|工作城市|地点|地址)\s*[：:]?\s*/i, '').trim(),
     salary: salary.replace(/^(薪资|薪酬|待遇)\s*[：:]?\s*/i, '').trim(),
   }
@@ -102,8 +125,14 @@ export function classifyJobText(text: string, current: CompanyFormData): JobText
   const parsed = parseJDText(raw)
   const meta = metadataFromText(raw)
   const fallback = classifyUnheadedLines(raw)
-  const responsibilities = sectionText(raw, RESPONSIBILITY_HEADING) || parsed.responsibilities || fallback.responsibilities
-  const requirements = sectionText(raw, REQUIREMENT_HEADING) || parsed.requirements || fallback.requirements
+  const hasResponsibilityHeading = raw.split('\n').some((line) => RESPONSIBILITY_HEADING.test(line.trim()))
+  const hasRequirementHeading = raw.split('\n').some((line) => REQUIREMENT_HEADING.test(line.trim()))
+  const responsibilities = hasResponsibilityHeading
+    ? sectionText(raw, RESPONSIBILITY_HEADING)
+    : (parsed.responsibilities || fallback.responsibilities)
+  const requirements = hasRequirementHeading
+    ? sectionText(raw, REQUIREMENT_HEADING)
+    : (hasResponsibilityHeading ? '' : (parsed.requirements || fallback.requirements))
   const analysis = analyzeJDByRules(raw)
   // 部分网站没有 Boss 的固定标题结构；保证分类结果也能在分析面板中可见。
   if (!analysis.responsibilitySections.length) {
@@ -118,8 +147,8 @@ export function classifyJobText(text: string, current: CompanyFormData): JobText
     source: detectSource(raw),
     patch: {
       jdRaw: raw,
-      name: meta.name || parsed.name || current.name,
-      position: meta.position || parsed.position || current.position,
+      name: meta.name || (isPlausibleCompany(parsed.name) ? parsed.name : '') || current.name,
+      position: meta.position || (isPlausiblePosition(parsed.position) ? parsed.position : '') || current.position,
       location: meta.location || parsed.location || current.location,
       salary: meta.salary || parsed.salary || current.salary,
       responsibilities,

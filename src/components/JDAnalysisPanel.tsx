@@ -15,14 +15,17 @@ interface Props {
   autoRefresh?: boolean
 }
 
-function BulletList({ items }: { items: string[] }) {
+function SubCards({ items }: { items: string[] }) {
   if (!items.length) return <p className="muted small">暂无</p>
   return (
-    <ul className="jd-bullet-list">
+    <div className="jd-subcard-grid">
       {items.map((item, i) => (
-        <li key={i}>{item}</li>
+        <article key={i} className="jd-subcard">
+          <span className="jd-subcard-index">{i + 1}</span>
+          <p>{item}</p>
+        </article>
       ))}
-    </ul>
+    </div>
   )
 }
 
@@ -35,7 +38,7 @@ function NumberedCards({ sections }: { sections: JdNumberedSection[] }) {
           <h4>
             {section.index}. {section.title}
           </h4>
-          <BulletList items={section.items} />
+          <SubCards items={section.items} />
         </article>
       ))}
     </div>
@@ -140,7 +143,7 @@ export function JDAnalysisPanel({
       </div>
 
       <p className="hint muted small">
-        按 Boss 原文结构分为「岗位职责」「任职要求」两大块，每块内 1. 2. 3. 各为一小格。
+        按原文小标题归类；小标题是卡片标题，下面的职责和要求以同级小卡片展示。
       </p>
       {message && <p className="hint">{message}</p>}
 

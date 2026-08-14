@@ -984,6 +984,41 @@ code {
   line-height: 1.4;
 }
 
+.jd-subcard-grid {
+  display: grid;
+  gap: 8px;
+}
+
+.jd-subcard {
+  display: flex;
+  gap: 9px;
+  align-items: flex-start;
+  padding: 10px 11px;
+  border: 1px solid var(--border-light);
+  border-radius: 8px;
+  background: var(--surface-muted);
+}
+
+.jd-subcard-index {
+  display: inline-grid;
+  place-items: center;
+  flex: 0 0 20px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: rgb(37 99 235 / 12%);
+  color: var(--primary);
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.jd-subcard p {
+  margin: 0;
+  color: var(--text-subtle);
+  font-size: 0.9rem;
+  line-height: 1.6;
+}
+
 .jd-skills-row {
   margin-top: 14px;
   padding-top: 12px;

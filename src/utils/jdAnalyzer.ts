@@ -36,9 +36,12 @@ function emptyLegacyArrays() {
 export function analyzeJDByRules(jdRaw: string, options: AnalyzeOptions = {}): JdAnalysis {
   const structured = parseStructuredJD(jdRaw, filterJobDescTags(options.skillTags ?? []))
   const genericBlocks = extractJobBlocks(jdRaw)
+  const lines = jdRaw.replace(/\r\n?/g, '\n').split('\n').map((line) => line.trim())
+  const hasResponsibilityHeading = lines.some((line) => /^(?:职位描述|岗位描述|工作内容|工作职责|岗位职责|职责描述)\s*[：:]?$/.test(line))
+  const hasRequirementHeading = lines.some((line) => /^(?:任职要求|职位要求|岗位要求|任职资格|任职条件)\s*[：:]?$/.test(line))
 
-  let respText = genericBlocks.responsibilities || structured.responsibilities
-  let reqText = genericBlocks.requirements || structured.requirements
+  let respText = hasResponsibilityHeading ? genericBlocks.responsibilities : structured.responsibilities
+  let reqText = hasRequirementHeading ? genericBlocks.requirements : structured.requirements
 
   if (options.requirementParts) {
     const p = options.requirementParts
