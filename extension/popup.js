@@ -93,10 +93,8 @@ async function capturePageText(tabId, source) {
 }
 
 async function scrapeTab(tab) {
-  // 字节职位页常以异步组件或 frame 呈现。直接读取所有 frame 的可见文本最可靠。
-  if (tab.url?.includes('jobs.bytedance.com')) return capturePageText(tab.id, 'bytedance')
-
   // 方式1：向已注入的 content script 发消息
+  // 字节职位页也必须先走 scrape-job.js：直接读取第一个 h1 会取到「校招」等页面标签。
   try {
     const res = await chrome.tabs.sendMessage(tab.id, { type: 'SCRAPE_JOB' })
     if (res?.ok) return { ok: true, data: res.data }
