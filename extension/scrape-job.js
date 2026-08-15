@@ -2,7 +2,12 @@
 function scrapeJobPage() {
   const clean = (value) => (value || '').replace(/\r\n?/g, '\n').replace(/\n{3,}/g, '\n\n').trim()
   const textOf = (el) => clean(el?.innerText || el?.textContent || '').replace(/\s+/g, ' ')
+  const isCssNoise = (line) => line.length > 80 && /(?::where\(|\.css-[\w-]+|--[\w-]+:|font-family:|clip-path:|@media\s*\()/i.test(line)
   const blockOf = (el) => clean(el?.innerText || el?.textContent || '')
+    .split('\n')
+    .filter((line) => !isCssNoise(line.trim()))
+    .join('\n')
+    .trim()
   const pick = (...selectors) => {
     for (const selector of selectors) {
       const value = textOf(document.querySelector(selector))
@@ -83,11 +88,8 @@ function scrapeJobPage() {
   const url = location.href.split('?')[0]
   const host = location.hostname
   const jsonJob = jobPostingFromJsonLd()
-  const shadowText = [...document.querySelectorAll('*')]
-    .map((element) => element.shadowRoot ? blockOf(element.shadowRoot) : '')
-    .filter((text) => text.length > 40)
-    .join('\n')
-  const bodyText = [blockOf(document.body), shadowText].filter(Boolean).join('\n')
+  // ShadowRoot 的 textContent 会包含组件注入的 CSS；职位页正文已在主文档可见，不能把样式表混入 JD。
+  const bodyText = blockOf(document.body)
   const source = host.includes('zhipin.com')
     ? 'boss-zhipin'
     : host.includes('bytedance.com')

@@ -6,6 +6,8 @@ const RESPONSIBILITY_HEADING = /^(?:职位描述|岗位描述|工作内容|工�
 const REQUIREMENT_HEADING = /^(?:任职要求|职位要求|岗位要求|任职资格|任职条件)\s*[：:]?$/
 // 页面底部、推荐职位等内容不属于当前 JD，不能继续混入职责卡片。
 const END_OF_JD = /^(?:相关职位|相关推荐|推荐职位|职位推荐|联系我们|相关网站|职位\s*ID|公司地址|投递方式|立即投递|分享|举报)/i
+const PAGE_NOISE = /(?::where\(|\.css-[\w-]+|--[\w-]+:|font-family:|clip-path:|@media\s*\()/i
+const FOOTER_NOISE = /^(?:字节跳动(?:\s+Seed)?团队|关注我们获取最新动态|候选人反馈平台|官网使用体验反馈|京公网安备)/
 
 function normalizedLines(text: string): string[] {
   return text
@@ -13,6 +15,7 @@ function normalizedLines(text: string): string[] {
     .split('\n')
     .map((line) => line.replace(/[\u200b-\u200d\ufeff]/g, '').trim())
     .filter(Boolean)
+    .filter((line) => !(line.length > 80 && PAGE_NOISE.test(line)) && !FOOTER_NOISE.test(line))
 }
 
 function stripListMarker(text: string): string {
