@@ -67,7 +67,7 @@ export function CompanyCard({ company }: Props) {
             {company.season} · {company.year}
           </span>
           {company.location && <span>{company.location}</span>}
-          {company.salary && <span>{company.salary}</span>}
+          <span>{company.salary || '暂无'}</span>
         </div>
         {deadlineHint && <div className="deadline">{deadlineHint}</div>}
       </Link>

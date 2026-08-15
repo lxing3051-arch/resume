@@ -34,7 +34,7 @@ function applyParsed(
     name: parsed.name || form.name,
     position: parsed.position || form.position,
     location: parsed.location || form.location,
-    salary: parsed.salary || form.salary,
+    salary: parsed.salary || form.salary || '暂无',
     requirements: parsed.requirements,
     responsibilities: parsed.responsibilities,
     skills: mergedSkills,

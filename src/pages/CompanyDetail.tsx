@@ -80,7 +80,7 @@ export default function CompanyDetail() {
           {company.season} · {company.year}
         </span>
         {company.location && <span>{company.location}</span>}
-        {company.salary && <span>{company.salary}</span>}
+        <span>{company.salary || '薪资：暂无'}</span>
         {company.deadline && <span>截止 {company.deadline}</span>}
         {daysUntil(company.deadline) && <span className="deadline">{daysUntil(company.deadline)}</span>}
       </div>

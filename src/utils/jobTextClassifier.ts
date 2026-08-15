@@ -152,7 +152,7 @@ export function classifyJobText(text: string, current: CompanyFormData): JobText
       name: meta.name || (isPlausibleCompany(parsed.name) ? parsed.name : '') || current.name,
       position: meta.position || (isPlausiblePosition(parsed.position) ? parsed.position : '') || current.position,
       location: meta.location || parsed.location || current.location,
-      salary: meta.salary || parsed.salary || current.salary,
+      salary: meta.salary || parsed.salary || current.salary || '暂无',
       responsibilities,
       requirements,
       skills,
