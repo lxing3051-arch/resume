@@ -42,6 +42,14 @@ function scrapeJobPage() {
       ? title
       : ''
   }
+  const normalizeSalary = (value) => {
+    const salary = clean(value).replace(/^(?:薪资|薪酬|待遇)\s*[：:]?\s*/i, '').trim()
+    if (/^(?:面议|薪资面议)$/i.test(salary)) return '面议'
+    // 必须含 K、元或货币符号；岗位 ID、年份、人数等纯数字不能作为薪资。
+    if (/^(?:¥|￥|\$)?\s*\d+(?:\.\d+)?\s*(?:[-~－至]\s*\d+(?:\.\d+)?\s*)?[kK](?:\s*[·・x×]\s*\d+\s*薪)?$/.test(salary)) return salary
+    if (/^(?:¥|￥)?\s*\d{3,7}\s*(?:[-~－至]\s*\d{3,7}\s*)?元(?:\s*\/\s*(?:月|天|年))?$/.test(salary)) return salary
+    return ''
+  }
   const sectionAfterHeading = (labels) => {
     const candidates = document.querySelectorAll('h2, h3, h4, strong, [class*="title"], [class*="Title"]')
     for (const heading of candidates) {
@@ -107,10 +115,10 @@ function scrapeJobPage() {
   const locationText = jsonJob?.jobLocation?.address?.addressLocality || pick(
     '.text-city', '.location-address', '[class*="location"]', '[class*="city"]', '[data-location]',
   ) || first(bodyText, [/(?:工作地点|工作城市|地点|地址)\s*[：:]?\s*([^\n]+)/i])
-  const salary = pick('.salary', '[class*="salary"]', '[class*="compensation"]') || first(bodyText, [
+  const salary = normalizeSalary(pick('.salary', '[class*="salary"]', '[class*="compensation"]') || first(bodyText, [
     /(?:薪资|薪酬|待遇)\s*[：:]?\s*([^\n]+)/i,
     /\b((?:\d{1,3}\s*[-~－至]\s*\d{1,3}|\d{1,3})\s*[kK](?:\s*[·・]\s*\d{1,2}薪)?)\b/,
-  ])
+  ]))
   const bytedanceDescription = host.includes('bytedance.com')
     ? [
         sectionAfterHeading(['职位描述', '岗位职责', '工作内容']),

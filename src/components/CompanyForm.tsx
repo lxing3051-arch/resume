@@ -176,7 +176,7 @@ export function CompanyForm({
           </label>
           <label className="field">
             <span>薪资</span>
-            <input value={form.salary} onChange={(e) => update({ salary: e.target.value })} />
+            <input placeholder="暂无" value={form.salary} onChange={(e) => update({ salary: e.target.value })} />
           </label>
           <label className="field">
             <span>截止日期</span>

@@ -21,6 +21,14 @@ const GENERIC_POSITION_TEXT = /^(?:核心业务|校园(?:招聘|校招)?|校招|
 const isPlausibleCompany = (value: string) => value.trim().length >= 2 && value.trim().length <= 30 && !BAD_IDENTITY_TEXT.test(value) && !ROLE_WORD.test(value)
 const isPlausiblePosition = (value: string) => value.trim().length >= 2 && value.trim().length <= 80 && !GENERIC_POSITION_TEXT.test(value.trim()) && ROLE_WORD.test(value)
 
+function importedSalary(value: string): string {
+  const salary = value.trim().replace(/^(?:薪资|薪酬|待遇)\s*[：:]?\s*/i, '')
+  if (/^(?:面议|薪资面议)$/i.test(salary)) return '面议'
+  if (/^(?:¥|￥|\$)?\s*\d+(?:\.\d+)?\s*(?:[-~－至]\s*\d+(?:\.\d+)?\s*)?[kK](?:\s*[·・x×]\s*\d+\s*薪)?$/.test(salary)) return salary
+  if (/^(?:¥|￥)?\s*\d{3,7}\s*(?:[-~－至]\s*\d{3,7}\s*)?元(?:\s*\/\s*(?:月|天|年))?$/.test(salary)) return salary
+  return '暂无'
+}
+
 export function stashExtensionImport(payload: ExtensionImportPayload) {
   try {
     localStorage.setItem(PENDING_KEY, JSON.stringify(payload))
@@ -81,7 +89,7 @@ export function extensionPayloadToForm(
     name: cleanName,
     position: isPlausiblePosition(payload.position) ? payload.position : (classified?.position || parsed.position || current.position),
     location: payload.location || parsed.location || current.location,
-    salary: payload.salary || parsed.salary || current.salary,
+    salary: importedSalary(payload.salary || parsed.salary),
     jdRaw: payload.jdRaw,
     // 优先使用统一分类器的结果：它会排除官网底部和「相关职位」等非 JD 内容。
     requirements: classified?.requirements || pickSectionText(payload.requirements ?? '', parsed.requirements, payload.jdRaw),
