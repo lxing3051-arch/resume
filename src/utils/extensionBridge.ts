@@ -89,7 +89,8 @@ export function extensionPayloadToForm(
     name: cleanName,
     position: isPlausiblePosition(payload.position) ? payload.position : (classified?.position || parsed.position || current.position),
     location: payload.location || parsed.location || current.location,
-    salary: importedSalary(payload.salary || parsed.salary),
+    // 未由插件明确抓到的薪资不从正文数字推测，统一标记为“暂无”。
+    salary: importedSalary(payload.salary ?? ''),
     jdRaw: payload.jdRaw,
     // 优先使用统一分类器的结果：它会排除官网底部和「相关职位」等非 JD 内容。
     requirements: classified?.requirements || pickSectionText(payload.requirements ?? '', parsed.requirements, payload.jdRaw),

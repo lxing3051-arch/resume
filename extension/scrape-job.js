@@ -123,9 +123,9 @@ function scrapeJobPage() {
   const locationText = jsonJob?.jobLocation?.address?.addressLocality || pick(
     '.text-city', '.location-address', '[class*="location"]', '[class*="city"]', '[data-location]',
   ) || first(bodyText, [/(?:工作地点|工作城市|地点|地址)\s*[：:]?\s*([^\n]+)/i])
-  const salary = normalizeSalary(pick('.salary', '[class*="salary"]', '[class*="compensation"]') || first(bodyText, [
-    /(?:薪资|薪酬|待遇)\s*[：:]?\s*([^\n]+)/i,
-    /\b((?:\d{1,3}\s*[-~－至]\s*\d{1,3}|\d{1,3})\s*[kK](?:\s*[·・]\s*\d{1,2}薪)?)\b/,
+  // 普通数字（职位 ID、届数、人数等）绝不能猜作薪资；只接受明确标注的薪资字段。
+  const salary = normalizeSalary(first(bodyText, [
+    /(?:^|\n)\s*(?:薪资|薪酬|待遇)\s*[：:]?\s*([^\n]+)/i,
   ]))
   const bytedanceDescription = host.includes('bytedance.com')
     ? [

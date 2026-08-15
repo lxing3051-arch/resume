@@ -89,8 +89,6 @@ function metadataFromText(text: string) {
   const lines = text.split('\n').map((line) => line.trim()).filter(Boolean).slice(0, 16)
   const salary = firstMatch(text, [
     /(?:薪资|薪酬|待遇)\s*[：:]?\s*([^\n]+)/i,
-    /\b((?:\d{1,3}\s*[-~－至]\s*\d{1,3}|\d{1,3})\s*[kK](?:\s*[·・]\s*\d{1,2}薪)?)\b/,
-    /\b(\d{3,5}\s*[-~－至]\s*\d{3,5}\s*元\s*\/\s*(?:月|天))\b/,
   ])
   const location = firstMatch(text, [
     /(?:工作地点|工作城市|地点|地址)\s*[：:]?\s*([^\n]+)/i,
@@ -152,7 +150,7 @@ export function classifyJobText(text: string, current: CompanyFormData): JobText
       name: meta.name || (isPlausibleCompany(parsed.name) ? parsed.name : '') || current.name,
       position: meta.position || (isPlausiblePosition(parsed.position) ? parsed.position : '') || current.position,
       location: meta.location || parsed.location || current.location,
-      salary: meta.salary || parsed.salary || current.salary || '暂无',
+      salary: meta.salary || current.salary || '暂无',
       responsibilities,
       requirements,
       skills,

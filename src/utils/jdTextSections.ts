@@ -96,7 +96,11 @@ export function buildDedupedSections(block: string, baseTitle: string, maxSectio
 
   const seen: string[] = []
   return groups
-    .map((group) => ({ title: group.title, items: sectionItems(group.lines, seen) }))
+    .map((group) => ({
+      title: group.title,
+      // 超过 10 条通常意味着推荐岗位或网页杂项泄漏；不继续展示可疑内容。
+      items: sectionItems(group.lines, seen).slice(0, 10),
+    }))
     .filter((group) => group.items.length)
     .slice(0, maxSections)
     .map((group, index) => ({ index: index + 1, ...group }))
