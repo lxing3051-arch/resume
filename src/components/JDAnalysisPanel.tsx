@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
 import type { JdAnalysis, JdNumberedSection } from '../types'
 import { analyzeJDByRules, ensureStructuredAnalysis } from '../utils/jdAnalyzer'
+import { analyzeJD } from '../utils/jdAnalysis'
+import { aiChat, isAiConfigured } from '../utils/aiProvider'
 import { saveJdAnalysis } from '../utils/jdAnalysisService'
 import { buildAnalysisSummary, buildCursorProjectPrompt } from '../utils/cursorPrompt'
 
@@ -62,6 +64,9 @@ export function JDAnalysisPanel({
   const [message, setMessage] = useState('')
   const [showRaw, setShowRaw] = useState(false)
   const [showCompany, setShowCompany] = useState(false)
+  const [aiQuestion, setAiQuestion] = useState('')
+  const [aiReply, setAiReply] = useState('')
+  const [askingAi, setAskingAi] = useState(false)
 
   useEffect(() => {
     setAnalysis(ensureStructuredAnalysis(initialAnalysis, jdRaw))
@@ -90,11 +95,42 @@ export function JDAnalysisPanel({
     setClassifying(true)
     setMessage('')
     try {
-      const next = analyzeJDByRules(jdRaw)
+      const next = await analyzeJD(jdRaw)
       await persistAnalysis(next)
-      setMessage('分类完成')
+      setMessage(next.source === 'ai' ? 'Gemini 分析完成' : '未连接 Gemini，已完成本地规则分类')
+    } catch (error) {
+      setMessage(error instanceof Error ? `分析失败：${error.message}` : '分析失败，请稍后重试')
     } finally {
       setClassifying(false)
+    }
+  }
+
+  async function handleAskAi() {
+    const question = aiQuestion.trim()
+    if (!question) return
+    if (!isAiConfigured()) {
+      setMessage('请先到“设置与备份”填写 Gemini API Key')
+      return
+    }
+    setAskingAi(true)
+    setAiReply('')
+    try {
+      const reply = await aiChat([
+        {
+          role: 'system',
+          content:
+            '你是秋招求职助手。只根据给出的岗位信息回答，使用简洁中文；信息不足时明确说明，不要编造。',
+        },
+        {
+          role: 'user',
+          content: `公司：${companyName || '未知'}\n岗位：${position || '未知'}\n\nJD：\n${jdRaw.slice(0, 8000)}\n\n问题：${question}`,
+        },
+      ])
+      setAiReply(reply)
+    } catch (error) {
+      setMessage(error instanceof Error ? `Gemini 回复失败：${error.message}` : 'Gemini 回复失败，请稍后重试')
+    } finally {
+      setAskingAi(false)
     }
   }
 
@@ -132,7 +168,7 @@ export function JDAnalysisPanel({
             disabled={classifying || !jdRaw.trim()}
             onClick={() => void handleClassify()}
           >
-            {display ? '重新分类' : '规则分类'}
+            {classifying ? '分析中…' : isAiConfigured() ? 'Gemini 分析' : display ? '重新规则分类' : '规则分类'}
           </button>
           <button
             className="btn primary"
@@ -149,6 +185,27 @@ export function JDAnalysisPanel({
         按原文小标题归类；小标题是卡片标题，下面的职责和要求以同级小卡片展示。
       </p>
       {message && <p className="hint">{message}</p>}
+
+      <div className="jd-ai-ask">
+        <label className="field">
+          <span>问 AI（可选）</span>
+          <textarea
+            rows={2}
+            value={aiQuestion}
+            placeholder="例如：这个岗位最看重哪些能力？我的项目经历应如何准备？"
+            onChange={(event) => setAiQuestion(event.target.value)}
+          />
+        </label>
+        <button
+          className="btn ghost"
+          type="button"
+          disabled={askingAi || !aiQuestion.trim() || !jdRaw.trim()}
+          onClick={() => void handleAskAi()}
+        >
+          {askingAi ? 'Gemini 回答中…' : '询问 Gemini'}
+        </button>
+        {aiReply && <p className="jd-ai-reply">{aiReply}</p>}
+      </div>
 
       {display && (
         <>

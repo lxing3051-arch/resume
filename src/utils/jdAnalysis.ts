@@ -27,16 +27,24 @@ JD 分析：
 
 function normalizeAnalysis(raw: Partial<JdAnalysis>, jdRaw: string): JdAnalysis {
   const arr = (v: unknown) => (Array.isArray(v) ? v.map(String).filter(Boolean) : [])
+  const responsibilities = arr(raw.responsibilities).slice(0, 10)
+  const requirements = arr(raw.requirements).slice(0, 10)
   return {
-    responsibilitySections: [],
-    requirementSections: [],
+    // AI 返回的是扁平条目；转换成页面所使用的「标题卡片 → 同级小卡片」结构，
+    // 否则 AI 分析成功后页面会错误地显示“暂无”。
+    responsibilitySections: responsibilities.length
+      ? [{ index: 1, title: '岗位职责', items: responsibilities }]
+      : [],
+    requirementSections: requirements.length
+      ? [{ index: 1, title: '任职要求', items: requirements }]
+      : [],
     education: arr(raw.education),
     experience: arr(raw.experience),
     hardSkills: arr(raw.hardSkills),
     softSkills: arr(raw.softSkills),
     projectRequirements: arr(raw.projectRequirements),
-    responsibilities: arr(raw.responsibilities),
-    requirements: arr(raw.requirements),
+    responsibilities,
+    requirements,
     companySummary: String(raw.companySummary ?? '').slice(0, 200),
     analyzedAt: new Date().toISOString(),
     source: 'ai',

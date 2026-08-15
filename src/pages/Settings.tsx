@@ -17,7 +17,15 @@ import {
   saveNotificationSettings,
 } from '../utils/notifications'
 import { getThemeMode, saveThemeMode } from '../utils/theme'
-import type { NotificationSettings, ThemeMode } from '../types'
+import { getAiSettings, saveAiSettings } from '../utils/aiSettings'
+import {
+  GEMINI_MODELS,
+  getGeminiSettings,
+  saveGeminiSettings,
+  testGeminiConnection,
+  validateGeminiApiKey,
+} from '../utils/gemini'
+import type { GeminiSettings, NotificationSettings, ThemeMode } from '../types'
 
 export default function Settings() {
   const [settings, setSettings] = useState<NotificationSettings>(getNotificationSettings())
@@ -27,6 +35,9 @@ export default function Settings() {
   const [permission, setPermission] = useState(
     'Notification' in window ? Notification.permission : 'unsupported',
   )
+  const [gemini, setGemini] = useState<GeminiSettings>(getGeminiSettings())
+  const [geminiMessage, setGeminiMessage] = useState('')
+  const [testingGemini, setTestingGemini] = useState(false)
 
   useEffect(() => {
     void getSyncFolderName().then(setSyncFolder)
@@ -41,6 +52,33 @@ export default function Settings() {
   function updateTheme(mode: ThemeMode) {
     setTheme(mode)
     saveThemeMode(mode)
+  }
+
+  function updateGemini(patch: Partial<GeminiSettings>) {
+    const next = { ...gemini, ...patch }
+    setGemini(next)
+    saveGeminiSettings(next)
+    saveAiSettings({ ...getAiSettings(), provider: 'gemini' })
+    setGeminiMessage('已保存到此浏览器')
+  }
+
+  async function handleTestGemini() {
+    const formatError = validateGeminiApiKey(gemini.apiKey)
+    if (formatError) {
+      setGeminiMessage(formatError)
+      return
+    }
+    setTestingGemini(true)
+    setGeminiMessage('正在连接 Gemini…')
+    try {
+      saveGeminiSettings(gemini)
+      saveAiSettings({ ...getAiSettings(), provider: 'gemini' })
+      setGeminiMessage(await testGeminiConnection())
+    } catch (error) {
+      setGeminiMessage(error instanceof Error ? `连接失败：${error.message}` : '连接失败，请检查 Key 和网络')
+    } finally {
+      setTestingGemini(false)
+    }
   }
 
   async function handleEnableNotifications() {
@@ -121,11 +159,37 @@ export default function Settings() {
       </section>
 
       <section className="panel">
-        <h2>做项目（Cursor 带做）</h2>
+        <h2>Gemini AI（可选）</h2>
         <p className="hint">
-          本网站不再内置 AI 分析。在公司详情页粘贴 JD 后，点「复制」，再把内容粘贴到任意 AI 对话中，让 AI
-          帮你选题、设计项目并一步步带做代码。
+          填入你自己的 Gemini API Key 后，可在岗位详情页用 Gemini 分析 JD 或直接提问。未配置时仍使用本地规则分析。
         </p>
+        <label className="field">
+          <span>Gemini API Key</span>
+          <input
+            type="password"
+            value={gemini.apiKey}
+            placeholder="AIza…"
+            autoComplete="off"
+            onChange={(event) => updateGemini({ apiKey: event.target.value })}
+          />
+        </label>
+        <label className="field">
+          <span>模型</span>
+          <select value={gemini.model} onChange={(event) => updateGemini({ model: event.target.value })}>
+            {GEMINI_MODELS.map((model) => (
+              <option key={model} value={model}>
+                {model}
+              </option>
+            ))}
+          </select>
+        </label>
+        <div className="quick-actions">
+          <button className="btn primary" type="button" disabled={testingGemini} onClick={() => void handleTestGemini()}>
+            {testingGemini ? '测试中…' : '测试 Gemini 连接'}
+          </button>
+        </div>
+        {geminiMessage && <p className="hint">{geminiMessage}</p>}
+        <p className="muted small">API Key 仅保存在当前浏览器的本地存储中；点击 Gemini 分析或提问时，相关 JD 文本才会发送给 Google。</p>
       </section>
 
       {supportsFolderSync() && (
