@@ -68,6 +68,12 @@ function scrapeJobPage() {
     }
     return ''
   }
+  const trimRecruitingTail = (text) => {
+    const normalized = clean(text)
+    const tail = /(?:^|\n)\s*(?:[•·●▪◦-]\s*)?(?:相关职位|相关推荐|推荐职位|职位推荐|联系我们|相关网站|候选人反馈平台|官网使用体验反馈|字节跳动招聘|京公网安备|版权所有)\s*(?=\n|$)/im
+    const match = normalized.match(tail)
+    return (match?.index === undefined ? normalized : normalized.slice(0, match.index)).trim()
+  }
 
   function jobPostingFromJsonLd() {
     const nodes = []
@@ -89,7 +95,7 @@ function scrapeJobPage() {
   const host = location.hostname
   const jsonJob = jobPostingFromJsonLd()
   // ShadowRoot 的 textContent 会包含组件注入的 CSS；职位页正文已在主文档可见，不能把样式表混入 JD。
-  const bodyText = blockOf(document.body)
+  const bodyText = trimRecruitingTail(blockOf(document.body))
   const source = host.includes('zhipin.com')
     ? 'boss-zhipin'
     : host.includes('bytedance.com')
@@ -137,7 +143,7 @@ function scrapeJobPage() {
 
   // 局部容器有时只包含「职位描述」或只包含「职位要求」。
   // 合并整页正文后再分段，避免另一块在录入时直接丢失。
-  const jdBody = [description, bodyText].filter(Boolean).join('\n').slice(0, 24000)
+  const jdBody = trimRecruitingTail([description, bodyText].filter(Boolean).join('\n')).slice(0, 24000)
   const requirements = first(jdBody, [
     /(?:任职要求|职位要求|岗位要求|任职资格|任职条件)\s*[：:]?\s*([\s\S]*?)(?=\n\s*(?:福利待遇|公司介绍|工作地点)\s*[：:]?|$)/i,
   ])

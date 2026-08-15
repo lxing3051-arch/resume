@@ -75,7 +75,11 @@ function sectionItems(lines: string[], seen: string[]): string[] {
  * 这样不会把「加入我们，你将做什么？」误当作一条职责，也避免每个编号单独成卡。
  */
 export function buildDedupedSections(block: string, baseTitle: string, maxSections = 10): JdNumberedSection[] {
-  const lines = normalizedLines(block).filter((line) => !MAIN_HEADING.test(line) && !END_OF_JD.test(cleanTitle(line)))
+  const allLines = normalizedLines(block)
+  // “相关职位”之后是推荐岗位和网站页脚，必须连同后续内容一起截断。
+  const tailIndex = allLines.findIndex((line) => END_OF_JD.test(cleanTitle(line)))
+  const lines = (tailIndex >= 0 ? allLines.slice(0, tailIndex) : allLines)
+    .filter((line) => !MAIN_HEADING.test(line) && !END_OF_JD.test(cleanTitle(line)))
   if (!lines.length) return []
 
   const groups: Array<{ title: string; lines: string[] }> = []
