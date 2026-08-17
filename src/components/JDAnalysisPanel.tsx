@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react'
+import { useLiveQuery } from 'dexie-react-hooks'
 import type { JdAnalysis, JdNumberedSection } from '../types'
+import { db } from '../db/database'
 import { analyzeJDByRules, ensureStructuredAnalysis } from '../utils/jdAnalyzer'
 import { analyzeJD } from '../utils/jdAnalysis'
 import { aiChat, isAiConfigured } from '../utils/aiProvider'
 import { saveJdAnalysis } from '../utils/jdAnalysisService'
-import { buildAnalysisSummary, buildCursorProjectPrompt } from '../utils/cursorPrompt'
+import { buildAnalysisSummary, buildResumeMatchPrompt } from '../utils/cursorPrompt'
 
 interface Props {
   analysis?: JdAnalysis
@@ -67,6 +69,7 @@ export function JDAnalysisPanel({
   const [aiQuestion, setAiQuestion] = useState('')
   const [aiReply, setAiReply] = useState('')
   const [askingAi, setAskingAi] = useState(false)
+  const projects = useLiveQuery(() => db.projects.orderBy('updatedAt').reverse().toArray(), [])
 
   useEffect(() => {
     setAnalysis(ensureStructuredAnalysis(initialAnalysis, jdRaw))
@@ -134,21 +137,22 @@ export function JDAnalysisPanel({
     }
   }
 
-  async function handleCopyForCursor() {
+  async function handleCopyResumePrompt() {
     if (!jdRaw.trim()) {
       setMessage('请先录入 JD 文本')
       return
     }
     const display = analysis ?? analyzeJDByRules(jdRaw)
-    const text = buildCursorProjectPrompt({
+    const text = buildResumeMatchPrompt({
       companyName,
       position: position || '（未填岗位名）',
       jdRaw,
       analysisSummary: buildAnalysisSummary(display),
+      projects: projects ?? [],
     })
     try {
       await navigator.clipboard.writeText(text)
-      setMessage('已复制到剪贴板')
+      setMessage('已复制简历匹配提示词：粘贴到 ChatGPT 即可开始新对话')
     } catch {
       setMessage('复制失败，请检查浏览器剪贴板权限')
     }
@@ -174,9 +178,9 @@ export function JDAnalysisPanel({
             className="btn primary"
             type="button"
             disabled={!jdRaw.trim()}
-            onClick={() => void handleCopyForCursor()}
+            onClick={() => void handleCopyResumePrompt()}
           >
-            复制
+            复制简历匹配提示词
           </button>
         </div>
       </div>
