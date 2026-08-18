@@ -4,6 +4,8 @@ import { dedupeBullets, isDuplicateText } from './jdDedupe'
 const MAIN_HEADING = /^(?:职位描述|岗位描述|工作内容|工作职责|岗位职责|职责描述|任职要求|职位要求|岗位要求|任职资格|任职条件|福利待遇|公司介绍|公司简介|关于我们)\s*[：:]?$/
 const RESPONSIBILITY_HEADING = /^(?:职位描述|岗位描述|工作内容|工作职责|岗位职责|职责描述)\s*[：:]?$/
 const REQUIREMENT_HEADING = /^(?:任职要求|职位要求|岗位要求|任职资格|任职条件)\s*[：:]?$/
+// 部分官网连续使用“你需要：”作为任务和资格的分隔标题，需结合出现顺序判断。
+const AMBIGUOUS_NEED_HEADING = /^(?:你需要|我们希望你|我们期待你|你将负责)\s*[：:]?$/
 // 页面底部、推荐职位等内容不属于当前 JD，不能继续混入职责卡片。
 const END_OF_JD = /^(?:相关职位|相关推荐|推荐职位|职位推荐|联系我们|相关网站|职位\s*ID|公司地址|投递方式|立即投递|分享|举报)/i
 const PAGE_NOISE = /(?::where\(|\.css-[\w-]+|--[\w-]+:|font-family:|clip-path:|@media\s*\()/i
@@ -53,7 +55,28 @@ export function extractJobBlocks(text: string): { responsibilities: string; requ
     }
     return result.join('\n').trim()
   }
-  return { responsibilities: collect(RESPONSIBILITY_HEADING), requirements: collect(REQUIREMENT_HEADING) }
+  const responsibilities = collect(RESPONSIBILITY_HEADING)
+  const requirements = collect(REQUIREMENT_HEADING)
+
+  // 例如：职位描述 → 你需要（工作事项）→ 你需要（任职资格）。
+  // 不能把第二段要求继续塞进职责，否则会出现职责十几条、要求为空的情况。
+  const responsibilityStart = lines.findIndex((line) => RESPONSIBILITY_HEADING.test(line))
+  const needs = lines
+    .map((line, index) => (AMBIGUOUS_NEED_HEADING.test(line) ? index : -1))
+    .filter((index) => index >= 0)
+  if (responsibilityStart >= 0 && needs.length >= 2) {
+    const end = (start: number) => {
+      const offset = lines.slice(start).findIndex((line) => END_OF_JD.test(cleanTitle(line)))
+      return offset < 0 ? lines.length : start + offset
+    }
+    return {
+      // 第一个“你需要”前通常是岗位/团队介绍，不属于职责条目。
+      responsibilities: lines.slice(needs[0] + 1, needs[1]).join('\n').trim(),
+      requirements: lines.slice(needs[1] + 1, end(needs[1] + 1)).join('\n').trim(),
+    }
+  }
+
+  return { responsibilities, requirements }
 }
 
 function sectionItems(lines: string[], seen: string[]): string[] {

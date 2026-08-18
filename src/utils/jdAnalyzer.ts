@@ -40,7 +40,7 @@ export function analyzeJDByRules(jdRaw: string, options: AnalyzeOptions = {}): J
   const genericBlocks = extractJobBlocks(jdRaw)
   const lines = jdRaw.replace(/\r\n?/g, '\n').split('\n').map((line) => line.trim())
   const hasResponsibilityHeading = lines.some((line) => /^(?:职位描述|岗位描述|工作内容|工作职责|岗位职责|职责描述)\s*[：:]?$/.test(line))
-  const hasRequirementHeading = lines.some((line) => /^(?:任职要求|职位要求|岗位要求|任职资格|任职条件)\s*[：:]?$/.test(line))
+  const hasRequirementHeading = lines.some((line) => /^(?:任职要求|职位要求|岗位要求|任职资格|任职条件|你需要|我们希望你|我们期待你|你将负责)\s*[：:]?$/.test(line))
 
   let respText = options.responsibilities?.trim() ||
     (hasResponsibilityHeading ? genericBlocks.responsibilities : structured.responsibilities)
