@@ -14,6 +14,8 @@ const FOOTER_NOISE = /^(?:字节跳动(?:\s+Seed)?团队|关注我们获取最�
 function normalizedLines(text: string): string[] {
   return text
     .replace(/\r\n?/g, '\n')
+    // 某些官网/插件会把“你需要：”和前一条正文压到同一行；先强制还原标题边界。
+    .replace(/\s*(?=(?:职位描述|岗位描述|岗位职责|工作职责|任职要求|职位要求|岗位要求|你需要|我们希望你|我们期待你|你将负责)\s*[：:])/g, '\n')
     .split('\n')
     .map((line) => line.replace(/[\u200b-\u200d\ufeff]/g, '').trim())
     .filter(Boolean)

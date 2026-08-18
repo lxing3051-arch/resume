@@ -144,10 +144,26 @@ function scrapeJobPage() {
   // 局部容器有时只包含「职位描述」或只包含「职位要求」。
   // 合并整页正文后再分段，避免另一块在录入时直接丢失。
   const jdBody = trimRecruitingTail([description, bodyText].filter(Boolean).join('\n')).slice(0, 24000)
-  const requirements = first(jdBody, [
+  // 有的官网连续两次使用“你需要：”：第一次是工作事项，第二次才是资格要求。
+  // 不先拆开会导致第二段要求被一并塞进职责。
+  const jobLines = jdBody
+    .replace(/\s*(?=(?:职位描述|岗位描述|岗位职责|工作职责|任职要求|职位要求|岗位要求|你需要|我们希望你|我们期待你|你将负责)\s*[：:])/g, '\n')
+    .split('\n')
+    .map((line) => line.trim())
+    .filter(Boolean)
+  const repeatedNeedIndexes = jobLines
+    .map((line, index) => (/^(?:你需要|我们希望你|我们期待你|你将负责)\s*[：:]?$/.test(line) ? index : -1))
+    .filter((index) => index >= 0)
+  const repeatedNeeds = repeatedNeedIndexes.length >= 2
+    ? {
+        responsibilities: jobLines.slice(repeatedNeedIndexes[0] + 1, repeatedNeedIndexes[1]).join('\n'),
+        requirements: jobLines.slice(repeatedNeedIndexes[1] + 1).join('\n'),
+      }
+    : null
+  const requirements = repeatedNeeds?.requirements || first(jdBody, [
     /(?:任职要求|职位要求|岗位要求|任职资格|任职条件)\s*[：:]?\s*([\s\S]*?)(?=\n\s*(?:福利待遇|公司介绍|工作地点)\s*[：:]?|$)/i,
   ])
-  const responsibilities = first(jdBody, [
+  const responsibilities = repeatedNeeds?.responsibilities || first(jdBody, [
     /(?:岗位职责|工作职责|工作内容|职位描述|岗位描述)\s*[：:]?\s*([\s\S]*?)(?=\n\s*(?:任职要求|职位要求|岗位要求|任职资格)\s*[：:]?|$)/i,
   ])
 
