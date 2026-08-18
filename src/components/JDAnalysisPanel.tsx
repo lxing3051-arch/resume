@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import type { JdAnalysis, JdNumberedSection } from '../types'
 import { db } from '../db/database'
-import { analyzeJDByRules, ensureStructuredAnalysis } from '../utils/jdAnalyzer'
+import { analyzeJDByRules, ensureStructuredAnalysis, needsRuleRefresh } from '../utils/jdAnalyzer'
 import { analyzeJD } from '../utils/jdAnalysis'
 import { aiChat, isAiConfigured } from '../utils/aiProvider'
 import { saveJdAnalysis } from '../utils/jdAnalysisService'
@@ -79,7 +79,10 @@ export function JDAnalysisPanel({
     if (!autoRefresh || !jdRaw.trim()) return
     // 插件导入时已保存的分段往往比纯原始网页文本更准确。
     // 详情页再次按规则解析会把这份结果覆盖成“暂无”，因此仅为旧记录补一次空分析。
-    if (initialAnalysis?.responsibilitySections?.length || initialAnalysis?.requirementSections?.length) return
+    if (
+      (initialAnalysis?.responsibilitySections?.length || initialAnalysis?.requirementSections?.length) &&
+      !needsRuleRefresh(initialAnalysis)
+    ) return
     const next = analyzeJDByRules(jdRaw)
     void persistAnalysis(next)
   }, [autoRefresh, jdRaw, companyId, initialAnalysis])

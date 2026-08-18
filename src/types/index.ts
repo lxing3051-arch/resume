@@ -130,6 +130,8 @@ export interface JdAnalysis {
   companySummary: string
   analyzedAt?: string
   source?: 'ai' | 'rules'
+  /** 用于在规则升级后自动刷新旧的本地分类结果。 */
+  rulesVersion?: string
   jdRawFingerprint?: string
 }
 

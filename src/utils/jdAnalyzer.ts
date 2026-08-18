@@ -16,6 +16,12 @@ export interface AnalyzeOptions {
   requirements?: string
 }
 
+export const JD_RULES_VERSION = '2026-08-18.2'
+
+export function needsRuleRefresh(analysis: JdAnalysis | undefined): boolean {
+  return analysis?.source === 'rules' && analysis.rulesVersion !== JD_RULES_VERSION
+}
+
 function summarizeCompany(intro: string): string {
   if (!intro.trim()) return ''
   const oneLine = intro.replace(/\s+/g, ' ').slice(0, 120)
@@ -42,9 +48,11 @@ export function analyzeJDByRules(jdRaw: string, options: AnalyzeOptions = {}): J
   const hasResponsibilityHeading = lines.some((line) => /^(?:职位描述|岗位描述|工作内容|工作职责|岗位职责|职责描述)\s*[：:]?$/.test(line))
   const hasRequirementHeading = lines.some((line) => /^(?:任职要求|职位要求|岗位要求|任职资格|任职条件|你需要|我们希望你|我们期待你|你将负责)\s*[：:]?$/.test(line))
 
-  let respText = options.responsibilities?.trim() ||
+  // 完整 JD 中重新分出的区块优先级最高。旧插件可能把整段内容错误塞入
+  // responsibilities；若先相信该字段，网页端的新分段规则就永远不会生效。
+  let respText = genericBlocks.responsibilities.trim() || options.responsibilities?.trim() ||
     (hasResponsibilityHeading ? genericBlocks.responsibilities : structured.responsibilities)
-  let reqText = options.requirements?.trim() ||
+  let reqText = genericBlocks.requirements.trim() || options.requirements?.trim() ||
     (hasRequirementHeading ? genericBlocks.requirements : structured.requirements)
 
   if (options.requirementParts) {
@@ -87,6 +95,7 @@ export function analyzeJDByRules(jdRaw: string, options: AnalyzeOptions = {}): J
     companySummary: summarizeCompany(structured.companyIntro),
     analyzedAt: new Date().toISOString(),
     source: 'rules',
+    rulesVersion: JD_RULES_VERSION,
     jdRawFingerprint: jdRawFingerprint(jdRaw),
   }
 }
@@ -106,7 +115,7 @@ export function mergeSkillsFromAnalysis(analysis: JdAnalysis, existing: string[]
 
 /** 旧版分析无 sections 时，用 jdRaw 重算 */
 export function ensureStructuredAnalysis(analysis: JdAnalysis | undefined, jdRaw: string): JdAnalysis {
-  if (analysis?.responsibilitySections?.length || analysis?.requirementSections?.length) {
+  if ((analysis?.responsibilitySections?.length || analysis?.requirementSections?.length) && !needsRuleRefresh(analysis)) {
     return analysis
   }
   if (!jdRaw.trim()) return analysis ?? emptyJdAnalysis()
