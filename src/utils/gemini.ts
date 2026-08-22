@@ -64,6 +64,29 @@ interface GeminiContent {
   parts: Array<{ text: string }>
 }
 
+interface GeminiResponsePart {
+  text?: string
+  /** Gemini 2.5 会将模型推理以独立 part 返回，不能直接展示给用户。 */
+  thought?: boolean
+}
+
+export function extractGeminiFinalText(data: {
+  candidates?: Array<{ content?: { parts?: GeminiResponsePart[] } }>
+}): string {
+  const parts = data.candidates?.[0]?.content?.parts ?? []
+  // Gemini 有时先返回 thought part，再返回最终答案。旧逻辑拿了第一段，
+  // 因而把英文推理草稿显示在“询问 AI”区域。
+  const finalText = parts
+    .filter((part) => !part.thought)
+    .map((part) => part.text?.trim() ?? '')
+    .filter(Boolean)
+    .join('\n')
+  if (finalText) return finalText
+
+  // 兼容不带 thought 标记的旧模型响应。
+  return parts.map((part) => part.text?.trim() ?? '').filter(Boolean).join('\n')
+}
+
 async function geminiFetch(path: string, apiKey: string, init: RequestInit = {}): Promise<Response> {
   const url = `${API_BASE}${path}`
   const headers = new Headers(init.headers)
@@ -122,9 +145,9 @@ async function geminiRequest(
     throw new Error(retry ? `__RETRY__:${detail}` : detail)
   }
   const data = (await res.json()) as {
-    candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>
+    candidates?: Array<{ content?: { parts?: GeminiResponsePart[] } }>
   }
-  const text = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim()
+  const text = extractGeminiFinalText(data)
   if (!text) throw new Error('Gemini 返回为空')
   return text
 }
@@ -253,7 +276,7 @@ export async function geminiChat(
 
   const body: Record<string, unknown> = {
     contents,
-    generationConfig: { maxOutputTokens: options?.maxOutputTokens ?? 8192 },
+    generationConfig: { maxOutputTokens: options?.maxOutputTokens ?? 2048 },
   }
   if (system) {
     body.systemInstruction = { parts: [{ text: system }] }
