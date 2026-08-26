@@ -20,7 +20,9 @@ export interface AnalyzeOptions {
 export const JD_RULES_VERSION = '2026-08-18.3'
 
 export function needsRuleRefresh(analysis: JdAnalysis | undefined): boolean {
-  return analysis?.source === 'rules' && analysis.rulesVersion !== JD_RULES_VERSION
+  // AI 只负责补充技能和摘要，卡片层级始终由原文分段规则决定。
+  // 因此旧版 AI 结果（没有规则版本）也必须刷新，不能继续把逐句数组直接展示出来。
+  return Boolean(analysis) && analysis?.rulesVersion !== JD_RULES_VERSION
 }
 
 function summarizeCompany(intro: string): string {

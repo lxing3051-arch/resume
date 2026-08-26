@@ -29,15 +29,11 @@ function normalizeAnalysis(raw: Partial<JdAnalysis>, jdRaw: string): JdAnalysis 
   const arr = (v: unknown) => (Array.isArray(v) ? v.map(String).filter(Boolean) : [])
   const responsibilities = arr(raw.responsibilities).slice(0, 10)
   const requirements = arr(raw.requirements).slice(0, 10)
+  // Gemini 的数组适合提取关键词，但常把每一句拆开。展示卡片一律保留原文标题和段落层级。
+  const structured = analyzeJDByRules(jdRaw)
   return {
-    // AI 返回的是扁平条目；转换成页面所使用的「标题卡片 → 同级小卡片」结构，
-    // 否则 AI 分析成功后页面会错误地显示“暂无”。
-    responsibilitySections: responsibilities.length
-      ? [{ index: 1, title: '岗位职责', items: responsibilities }]
-      : [],
-    requirementSections: requirements.length
-      ? [{ index: 1, title: '任职要求', items: requirements }]
-      : [],
+    responsibilitySections: structured.responsibilitySections,
+    requirementSections: structured.requirementSections,
     education: arr(raw.education),
     experience: arr(raw.experience),
     hardSkills: arr(raw.hardSkills),
@@ -48,6 +44,7 @@ function normalizeAnalysis(raw: Partial<JdAnalysis>, jdRaw: string): JdAnalysis 
     companySummary: String(raw.companySummary ?? '').slice(0, 200),
     analyzedAt: new Date().toISOString(),
     source: 'ai',
+    rulesVersion: structured.rulesVersion,
     jdRawFingerprint: jdRawFingerprint(jdRaw),
   }
 }
