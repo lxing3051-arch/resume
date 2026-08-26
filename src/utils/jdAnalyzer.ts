@@ -16,7 +16,8 @@ export interface AnalyzeOptions {
   requirements?: string
 }
 
-export const JD_RULES_VERSION = '2026-08-18.2'
+// 改动分段规则后，旧的规则分类必须自动重算，不能继续展示缓存的逐句卡片。
+export const JD_RULES_VERSION = '2026-08-18.3'
 
 export function needsRuleRefresh(analysis: JdAnalysis | undefined): boolean {
   return analysis?.source === 'rules' && analysis.rulesVersion !== JD_RULES_VERSION

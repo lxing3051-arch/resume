@@ -10,6 +10,8 @@ const AMBIGUOUS_NEED_HEADING = /^(?:你需要|我们希望你|我们期待你|�
 const END_OF_JD = /^(?:相关职位|相关推荐|推荐职位|职位推荐|联系我们|相关网站|职位\s*ID|公司地址|投递方式|立即投递|分享|举报)/i
 const PAGE_NOISE = /(?::where\(|\.css-[\w-]+|--[\w-]+:|font-family:|clip-path:|@media\s*\()/i
 const FOOTER_NOISE = /^(?:字节跳动(?:\s+Seed)?团队|关注我们获取最新动态|候选人反馈平台|官网使用体验反馈|京公网安备)/
+// 招聘官网常把导航、面包屑和当前职位标题一并放进正文 textContent；这些不是 JD。
+const NAVIGATION_NOISE = /^(?:职位列表|校园招聘主页|招聘首页|首页\s*\/\s*职位列表\s*\/\s*职位详情|首页\s*\/\s*职位列表|职位详情|分享|举报)$/i
 
 function normalizedLines(text: string): string[] {
   return text
@@ -19,7 +21,7 @@ function normalizedLines(text: string): string[] {
     .split('\n')
     .map((line) => line.replace(/[\u200b-\u200d\ufeff]/g, '').trim())
     .filter(Boolean)
-    .filter((line) => !(line.length > 80 && PAGE_NOISE.test(line)) && !FOOTER_NOISE.test(line))
+    .filter((line) => !(line.length > 80 && PAGE_NOISE.test(line)) && !FOOTER_NOISE.test(line) && !NAVIGATION_NOISE.test(line))
 }
 
 function stripListMarker(text: string): string {
@@ -39,10 +41,21 @@ function cleanTitle(text: string): string {
 function isSubsectionHeading(line: string): boolean {
   const title = cleanTitle(line)
   if (!title || MAIN_HEADING.test(title)) return false
+  if (NAVIGATION_NOISE.test(title) || /^\d{1,2}[.、)）]/.test(line)) return false
   return (
     (/^[【\[（(].+[】\]）)]$/.test(line) && title.length <= 36) ||
-    (/^(?:加入我们|你将做什么|我们希望你|你需要具备|我们期待|你会负责)/.test(title) && title.length <= 36)
+    (/^(?:加入我们|你将做什么|我们希望你|你需要具备|我们期待|你会负责)/.test(title) && title.length <= 36) ||
+    // 官网经常以「团队使命：」「技术风险咨询 (Tech Risk)」这类短标题分段，
+    // 没有 【】 也应保留为卡片标题，而不是变成一条句子卡片。
+    ((/[：:]$/.test(line) || /[（(][A-Za-z][^）)]*[）)]$/.test(title)) && title.length <= 42)
   )
+}
+
+function isChildLabel(line: string, hasParent: boolean): boolean {
+  const title = cleanTitle(line)
+  // 只有「内修：」「外赋：」这种极短标签属于上层标题的内容；
+  // 「团队使命、内修+外赋：」「核心技术方向：」本身仍是新的段落标题。
+  return hasParent && /^[^。！？!?]{1,4}[：:]$/.test(line) && title.length <= 4
 }
 
 export function extractJobBlocks(text: string): { responsibilities: string; requirements: string } {
@@ -82,10 +95,25 @@ export function extractJobBlocks(text: string): { responsibilities: string; requ
 }
 
 function sectionItems(lines: string[], seen: string[]): string[] {
+  // 「内修：」下一行正文应合成同一个小卡片，不能拆成两个句子卡片。
+  const paragraphs: string[] = []
+  let label = ''
+  for (const rawLine of lines) {
+    const line = stripListMarker(rawLine)
+      .replace(/^\s*[【\[（(]\s*|\s*[】\]）)]\s*$/g, '')
+      .trim()
+    if (!line) continue
+    if (/^[^。！？!?]{1,4}[：:]$/.test(line)) {
+      label = cleanTitle(line)
+      continue
+    }
+    paragraphs.push(label ? `${label}：${line}` : line)
+    label = ''
+  }
+  if (label) paragraphs.push(label)
+
   return dedupeBullets(
-    lines
-      .map(stripListMarker)
-      .map((line) => line.replace(/^\s*[【\[（(]\s*|\s*[】\]）)]\s*$/g, '').trim())
+    paragraphs
       .filter((line) => line.length >= 4)
       .filter((line) => {
         if (seen.some((previous) => isDuplicateText(previous, line))) return false
@@ -111,6 +139,12 @@ export function buildDedupedSections(block: string, baseTitle: string, maxSectio
   let current = { title: baseTitle, lines: [] as string[] }
   for (const line of lines) {
     if (isSubsectionHeading(line)) {
+      // 已有分段里的「内修：」「外赋：」是同一标题下的同级小卡片标签，
+      // 保留在当前卡片中，由 sectionItems 与下一段正文合并。
+      if (isChildLabel(line, current.title !== baseTitle)) {
+        current.lines.push(line)
+        continue
+      }
       if (current.lines.length) groups.push(current)
       current = { title: cleanTitle(line), lines: [] }
     } else {
