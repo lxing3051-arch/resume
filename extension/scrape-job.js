@@ -35,6 +35,7 @@ function scrapeJobPage() {
     return ''
   }
   const ROLE_WORD = /(?:工程师|开发|算法|产品|运营|设计|分析师|专员|顾问|实习生|管培生|经理|研究员|测试|销售|市场|商务|财务|法务|编辑|策划)/
+  const ENGLISH_ROLE_WORD = /\b(?:advisory|technology|consult(?:ing|ant)|analyst|associate|intern(?:ship)?|graduate|risk|digital|enablement|audit|tax|finance|strategy|data|software|engineer|manager)\b/i
   // 仅拦截「校招」这类纯导航标签；真实职位名可以包含“校招”说明。
   const GENERIC_JOB_TITLE = /^(?:核心业务|校园(?:招聘|校招)?|校招|加入我们|相关职位|相关网站|联系我们|职位\s*ID|公司介绍|招聘首页|职位列表)$/
   const normalizeJobTitle = (value) => {
@@ -43,7 +44,8 @@ function scrapeJobPage() {
       .replace(/\s*(?:[-|｜]\s*)?(?:字节跳动|ByteDance|腾讯|Tencent|快手|Kuaishou)(?:招聘|校园招聘)?\s*$/i, '')
       .replace(/\s*(?:[-|｜]\s*)?(?:校园招聘|社会招聘|招聘官网)\s*$/i, '')
       .trim()
-    return title.length >= 2 && title.length <= 80 && ROLE_WORD.test(title) && !GENERIC_JOB_TITLE.test(title)
+    const looksLikeEnglishRole = /[A-Za-z]{3}/.test(title) && ENGLISH_ROLE_WORD.test(title)
+    return title.length >= 2 && title.length <= 100 && (ROLE_WORD.test(title) || looksLikeEnglishRole) && !GENERIC_JOB_TITLE.test(title)
       ? title
       : ''
   }
@@ -100,9 +102,9 @@ function scrapeJobPage() {
     ? 'boss-zhipin'
     : host.includes('bytedance.com')
       ? 'bytedance'
-      : host.includes('qq.com')
-        ? 'tencent'
-        : 'generic-web'
+    : host.includes('qq.com')
+      ? 'tencent'
+      : 'generic-web'
 
   // 明确标注的「职位/岗位」字段优先级高于 H1 和 document.title；后两者常是导航文案。
   const labelledTitle = first(bodyText, [
@@ -111,7 +113,8 @@ function scrapeJobPage() {
   const selectorTitle = pick(
     '.job-banner h1', '.job-primary h1', '.job-title',
     '[class*="job-title"]', '[class*="position-title"]',
-    '[class*="jobName"]', 'main h1', 'h1',
+    '[class*="jobName"]', '[class*="position-name"]', '[class*="positionName"]',
+    '[class*="post-title"]', 'main h1', 'h1',
   )
   const title = normalizeJobTitle(jsonJob?.title) || normalizeJobTitle(selectorTitle) ||
     normalizeJobTitle(labelledTitle) || normalizeJobTitle(document.querySelector('meta[property="og:title"]')?.content) ||
@@ -119,7 +122,12 @@ function scrapeJobPage() {
   const company = jsonJob?.hiringOrganization?.name || pick(
     '.company-info h3', '.company-name', '[class*="company-name"]',
     '[class*="companyName"]', '[data-company-name]',
-  ) || (host.includes('bytedance.com') ? '字节跳动' : host.includes('qq.com') ? '腾讯' : '')
+  ) || (
+    host.includes('bytedance.com') ? '字节跳动'
+      : host.includes('qq.com') ? '腾讯'
+        : /(?:^|\.)kpmg\./i.test(host) ? '毕马威'
+          : ''
+  )
   const locationText = jsonJob?.jobLocation?.address?.addressLocality || pick(
     '.text-city', '.location-address', '[class*="location"]', '[class*="city"]', '[data-location]',
   ) || first(bodyText, [/(?:工作地点|工作城市|地点|地址)\s*[：:]?\s*([^\n]+)/i])

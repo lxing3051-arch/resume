@@ -22,9 +22,11 @@ function setStatus(text) {
 function isJobPage(url) {
   if (!url || !/^https?:/i.test(url)) return false
   try {
-    const { hostname, pathname } = new URL(url)
+    const { hostname, pathname, search, hash } = new URL(url)
     if (hostname.endsWith('join.qq.com') || hostname.endsWith('jobs.bytedance.com')) return true
-    return /job|jobs|position|career|recruit|zhipin/i.test(pathname)
+    // KPMG 等校招站的详情页常用 hash 或 query 保存职位编号，路径本身可能只是“/”。
+    if (/(?:^|\.)kpmg\./i.test(hostname)) return true
+    return /job|jobs|position|career|recruit|zhipin/i.test(`${pathname}${search}${hash}`)
   } catch {
     return false
   }
