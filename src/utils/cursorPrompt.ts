@@ -1,14 +1,11 @@
-import type { PortfolioProject } from '../types'
-
-/** 复制 JD 到 AI 对话的简历匹配提示模板。 */
+/** 复制原始 JD 给用户的简历 skill，由 skill 读取既有简历后生成针对性版本。 */
 export function buildResumeMatchPrompt(opts: {
   companyName?: string
   position: string
   jdRaw: string
   analysisSummary?: string
-  projects?: PortfolioProject[]
 }): string {
-  const { companyName, position, jdRaw, analysisSummary, projects = [] } = opts
+  const { companyName, position, jdRaw, analysisSummary } = opts
   const header = companyName ?
     `我在准备秋招，目标岗位：${position}（${companyName}）`
   : `我在准备秋招，目标岗位：${position}`
@@ -16,7 +13,7 @@ export function buildResumeMatchPrompt(opts: {
   const parts = [
     header,
     '',
-    '以下是 Boss 直聘岗位描述（JD）：',
+    '以下是招聘网页原始 JD：',
     '---',
     jdRaw.trim(),
     '---',
@@ -26,30 +23,15 @@ export function buildResumeMatchPrompt(opts: {
     parts.push('', '（网站已做的结构分类摘要，供参考）', analysisSummary.trim())
   }
 
-  parts.push('', '我已有的项目如下：')
-  if (projects.length) {
-    projects.forEach((project, index) => {
-      parts.push(
-        `${index + 1}. ${project.title}`,
-        `- 描述：${project.description || '未填写'}`,
-        `- 技术栈：${project.techStack.join('、') || '未填写'}`,
-        `- 简历亮点：${project.highlights.join('；') || '未填写'}`,
-      )
-    })
-  } else {
-    parts.push('（项目库中暂未录入项目；请先向我询问已有项目的内容，不要直接虚构项目。）')
-  }
-
   parts.push(
     '',
-    '请按以下顺序帮我准备这份岗位的简历：',
-    '1. 提炼 JD 中最重要的硬技能、业务场景和项目经历要求，并区分“必须具备”和“加分项”。',
-    '2. 逐个评估我已有项目与 JD 的匹配度（高/中/低），说明匹配点、缺口和不能写进简历的部分。不要编造我没有做过的成果、数据或职责。',
-    '3. 选出最适合投递该岗位的 1～2 个已有项目；为每个项目写 3 条可直接放进简历的表述，并说明需要我补充核实的信息。',
-    '4. 只有当“必须具备”的能力无法由已有项目覆盖时，才提出一个最小的补充项目建议，并先说明它要补哪个缺口；不要默认生成新项目，也不要给出从零开发教程。',
-    '5. 最后给出一版针对该岗位的“项目经历”简历段落草稿，保留需要我确认的数据为【待确认】。',
+    '请使用我的“简历 skill”处理这份 JD：',
+    '1. 先读取我已有的简历、技能和项目经历；不要在本提示中重复索取或虚构项目。',
+    '2. 对照 JD 判断我的已有经历与岗位的匹配度，标出匹配点、缺口和需要我确认的信息。',
+    '3. 基于真实已有经历，生成一版针对该岗位的简历内容：个人优势、技能排序和项目经历表述；没有依据的数据一律写【待确认】。',
+    '4. 不要主动生成新项目、虚构项目成果，或给出从零开发项目方案。只有我明确追问补强方式时，再说明缺口。',
     '',
-    '请优先复用已有项目，回答要具体、克制，并严格基于我提供的信息。',
+    '请严格基于 JD 和我的既有简历信息作答。',
   )
 
   return parts.join('\n')
