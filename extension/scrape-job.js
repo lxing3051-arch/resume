@@ -116,7 +116,16 @@ function scrapeJobPage() {
     '[class*="jobName"]', '[class*="position-name"]', '[class*="positionName"]',
     '[class*="post-title"]', 'main h1', 'h1',
   )
-  const title = normalizeJobTitle(jsonJob?.title) || normalizeJobTitle(selectorTitle) ||
+  // 部分校招官网不用 h1，而是在普通 div 中展示职位名；从页面前部的标题候选中兜底。
+  const headingTitle = Array.from(document.querySelectorAll('h1, h2, [class*="title" i], [class*="name" i]'))
+    .map((element) => normalizeJobTitle(textOf(element)))
+    .find(Boolean)
+  const bodyTitle = bodyText
+    .split('\n')
+    .slice(0, 40)
+    .map(normalizeJobTitle)
+    .find(Boolean)
+  const title = normalizeJobTitle(jsonJob?.title) || normalizeJobTitle(selectorTitle) || headingTitle || bodyTitle ||
     normalizeJobTitle(labelledTitle) || normalizeJobTitle(document.querySelector('meta[property="og:title"]')?.content) ||
     normalizeJobTitle(document.title)
   const company = jsonJob?.hiringOrganization?.name || pick(
@@ -125,7 +134,7 @@ function scrapeJobPage() {
   ) || (
     host.includes('bytedance.com') ? '字节跳动'
       : host.includes('qq.com') ? '腾讯'
-        : /(?:^|\.)kpmg\./i.test(host) ? '毕马威'
+        : host.includes('kpmg') ? '毕马威'
           : ''
   )
   const locationText = jsonJob?.jobLocation?.address?.addressLocality || pick(

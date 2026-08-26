@@ -20,16 +20,9 @@ function setStatus(text) {
 }
 
 function isJobPage(url) {
-  if (!url || !/^https?:/i.test(url)) return false
-  try {
-    const { hostname, pathname, search, hash } = new URL(url)
-    if (hostname.endsWith('join.qq.com') || hostname.endsWith('jobs.bytedance.com')) return true
-    // KPMG 等校招站的详情页常用 hash 或 query 保存职位编号，路径本身可能只是“/”。
-    if (/(?:^|\.)kpmg\./i.test(hostname)) return true
-    return /job|jobs|position|career|recruit|zhipin/i.test(`${pathname}${search}${hash}`)
-  } catch {
-    return false
-  }
+  // 用户主动点击插件即表示当前页可能是职位详情。官网的职位链接格式差异很大，
+  // 不能再因 URL 不含 job/position 而提前拒绝抓取。
+  return Boolean(url && /^https?:/i.test(url))
 }
 
 async function scrapeViaInjection(tabId) {
