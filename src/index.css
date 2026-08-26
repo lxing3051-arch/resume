@@ -295,6 +295,71 @@ a {
   margin-bottom: 12px;
 }
 
+.card-progress {
+  margin: 2px 0 12px;
+  padding: 10px 0 0;
+  border-top: 1px solid var(--border-light);
+}
+
+.card-progress-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 9px;
+  color: var(--text-subtle);
+  font-size: 0.84rem;
+}
+
+.card-progress-head strong { color: var(--text); }
+
+.card-stepper {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 3px;
+}
+
+.card-step {
+  position: relative;
+  display: grid;
+  justify-items: center;
+  gap: 4px;
+  color: var(--text-muted);
+  font-size: 0.68rem;
+  text-align: center;
+}
+
+.card-step:not(:last-child)::after {
+  content: '';
+  position: absolute;
+  top: 10px;
+  left: calc(50% + 10px);
+  width: calc(100% - 20px);
+  height: 2px;
+  background: var(--border);
+}
+
+.card-step-dot {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  width: 21px;
+  height: 21px;
+  border-radius: 50%;
+  background: var(--surface-muted);
+  border: 1px solid var(--border);
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
+.card-step.进行中,
+.card-step.已完成 { color: var(--primary); }
+
+.card-step.进行中 .card-step-dot { background: var(--primary); border-color: var(--primary); color: var(--primary-text); }
+.card-step.已完成 .card-step-dot { background: #22c55e; border-color: #22c55e; color: #fff; }
+.card-step.已完成:not(:last-child)::after { background: #22c55e; }
+.card-step.已跳过 { color: var(--text-muted); text-decoration: line-through; }
+
 .badge {
   display: inline-block;
   padding: 4px 10px;
@@ -302,6 +367,19 @@ a {
   color: #fff;
   font-size: 0.8rem;
   white-space: nowrap;
+}
+
+.card-phase-badge {
+  flex: 0 0 auto;
+  max-width: 112px;
+  padding: 5px 9px;
+  border-radius: 999px;
+  background: rgb(37 99 235 / 12%);
+  color: var(--primary);
+  font-size: 0.78rem;
+  font-weight: 700;
+  line-height: 1.25;
+  text-align: center;
 }
 
 .tags {

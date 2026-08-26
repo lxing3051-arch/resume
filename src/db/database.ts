@@ -1,12 +1,5 @@
 import Dexie, { type EntityTable } from 'dexie'
-import type {
-  Company,
-  CompanyProjectLink,
-  InterviewNote,
-  PortfolioProject,
-  ResumeVersion,
-  Stage,
-} from '../types'
+import { DEFAULT_STAGES, type Company, type CompanyProjectLink, type InterviewNote, type PortfolioProject, type ResumeVersion, type Stage } from '../types'
 
 interface SyncMeta {
   key: string
@@ -58,6 +51,42 @@ class JobTrackerDB extends Dexie {
       projects: '++id, title, status, updatedAt',
       companyProjectLinks: '++id, companyId, projectId',
     })
+    this.version(6)
+      .stores({
+        companies: '++id, name, season, year, status, deadline, updatedAt',
+        stages: '++id, companyId, order',
+        resumes: '++id, name, createdAt',
+        interviewNotes: '++id, companyId, createdAt, updatedAt',
+        meta: 'key',
+        projects: '++id, title, status, updatedAt',
+        companyProjectLinks: '++id, companyId, projectId',
+      })
+      .upgrade(async (tx) => {
+        // 为已有记录补上“测评”，并按新的标准流程重排；已有状态不变。
+        const companies = await tx.table('companies').toArray() as Company[]
+        const stageTable = tx.table('stages')
+        for (const company of companies) {
+          if (!company.id) continue
+          const existing = await stageTable.where('companyId').equals(company.id).toArray() as Stage[]
+          const custom = existing.filter((stage) => !DEFAULT_STAGES.includes(stage.type))
+          for (const [index, type] of DEFAULT_STAGES.entries()) {
+            const stage = existing.find((item) => item.type === type)
+            if (stage?.id) {
+              await stageTable.update(stage.id, { order: index * 10 })
+            } else {
+              await stageTable.add({
+                companyId: company.id,
+                type,
+                status: '未开始',
+                order: index * 10,
+              })
+            }
+          }
+          for (const [index, stage] of custom.entries()) {
+            if (stage.id) await stageTable.update(stage.id, { order: 100 + index })
+          }
+        }
+      })
   }
 }
 

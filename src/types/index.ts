@@ -3,6 +3,7 @@ export type Season = '秋招' | '春招' | '实习' | '社招' | '其他'
 export type StageType =
   | '网申'
   | '简历投递'
+  | '测评'
   | '笔试'
   | '一面'
   | '二面'
@@ -203,6 +204,7 @@ export interface CompanyProjectLink {
 export const DEFAULT_STAGES: StageType[] = [
   '网申',
   '简历投递',
+  '测评',
   '笔试',
   '一面',
   '二面',
