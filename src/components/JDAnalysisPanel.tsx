@@ -103,7 +103,7 @@ export function JDAnalysisPanel({
     try {
       const next = await analyzeJD(jdRaw)
       await persistAnalysis(next)
-      setMessage(next.source === 'ai' ? 'Gemini 分析完成' : '未连接 Gemini，已完成本地规则分类')
+      setMessage(next.source === 'ai' ? 'Gemini 智能分类完成' : '未连接 Gemini，已完成本地规则分类')
     } catch (error) {
       setMessage(error instanceof Error ? `分析失败：${error.message}` : '分析失败，请稍后重试')
     } finally {
@@ -175,7 +175,7 @@ export function JDAnalysisPanel({
             disabled={classifying || !jdRaw.trim()}
             onClick={() => void handleClassify()}
           >
-            {classifying ? '分析中…' : isAiConfigured() ? 'Gemini 分析' : display ? '重新规则分类' : '规则分类'}
+            {classifying ? '分析中…' : isAiConfigured() ? 'Gemini 智能分类' : display ? '重新规则分类' : '规则分类'}
           </button>
           <button
             className="btn primary"

@@ -1,10 +1,12 @@
-import type { JdAnalysis, ResumeProjectSuggestion } from '../types'
+import type { JdAnalysis, JdNumberedSection, ResumeProjectSuggestion } from '../types'
 import { analyzeJDByRules } from './jdAnalyzer'
 import { aiGenerateJson, isAiAvailable, isAiConfigured } from './aiProvider'
 import { createProjectId, jdRawFingerprint } from './jdFingerprint'
 
-const ANALYZE_PROMPT = `你是资深 HR 和职业规划师。分析以下 Boss 直聘岗位 JD，提取并分类信息。
+const ANALYZE_PROMPT = `你是资深 HR 和职业规划师。分析以下招聘 JD，提取并分类信息。
 只输出 JSON，不要其他文字。字段说明：
+- responsibilitySections: 岗位职责的段落分组，格式 [{"title":"原文小标题或概括标题","items":["该标题下的一段完整职责", "另一段完整职责"]}]。
+- requirementSections: 任职要求的段落分组，格式同上。
 - education: 学历、专业要求（字符串数组，每条一句）
 - experience: 工作/实习年限与经验要求（数组）
 - hardSkills: 硬技能、技术栈（数组）
@@ -14,8 +16,40 @@ const ANALYZE_PROMPT = `你是资深 HR 和职业规划师。分析以下 Boss �
 - requirements: 任职要求，拆成简洁条目（数组）
 - companySummary: 公司介绍压缩为1-2句话，非重点，不超过80字
 
+分组规则：优先保留原文的小标题（例如“团队使命”“技术风险咨询”）；同一段内的连续说明合并为一项，绝不按单句或换行逐条切开；每类最多 6 个标题、每标题最多 6 项。不要把导航、面包屑、相关职位、页脚、职位列表、校园招聘主页、职位名称或公司名放入结果。只能使用 JD 中已有的信息，不得编造。
+
 岗位描述：
 `
+
+const AI_NOISE = /^(?:职位列表|校园招聘主页|招聘首页|职位详情|首页\s*\/|分享|举报|相关职位|相关推荐|推荐职位)$/i
+
+function normalizeAiSections(value: unknown, fallback: JdNumberedSection[]): JdNumberedSection[] {
+  if (!Array.isArray(value)) return fallback
+  const seen: string[] = []
+  const sections = value
+    .map((entry) => {
+      if (!entry || typeof entry !== 'object') return null
+      const record = entry as { title?: unknown; items?: unknown }
+      const title = String(record.title ?? '').replace(/[：:]$/, '').trim()
+      if (!title || title.length > 48 || AI_NOISE.test(title) || !Array.isArray(record.items)) return null
+      const items = record.items
+        .map((item) => String(item).replace(/\s+/g, ' ').trim())
+        .filter((item) => item.length >= 4 && item.length <= 500 && !AI_NOISE.test(item))
+        .filter((item) => {
+          const key = item.replace(/\s+/g, '')
+          if (seen.some((previous) => previous === key)) return false
+          seen.push(key)
+          return true
+        })
+        .slice(0, 6)
+      return items.length ? { title, items } : null
+    })
+    .filter((section): section is { title: string; items: string[] } => Boolean(section))
+    .slice(0, 6)
+    .map((section, index) => ({ index: index + 1, ...section }))
+
+  return sections.length ? sections : fallback
+}
 
 const PROJECT_PROMPT = `你是项目导师和简历辅导专家。根据以下岗位的项目/技术/职责要求，为学生设计2-3个可在2-4周内完成的实战项目。
 项目要有明确业务场景，技术栈与 JD 对齐，适合写进简历，且学生真的能动手做出来。
@@ -29,11 +63,11 @@ function normalizeAnalysis(raw: Partial<JdAnalysis>, jdRaw: string): JdAnalysis 
   const arr = (v: unknown) => (Array.isArray(v) ? v.map(String).filter(Boolean) : [])
   const responsibilities = arr(raw.responsibilities).slice(0, 10)
   const requirements = arr(raw.requirements).slice(0, 10)
-  // Gemini 的数组适合提取关键词，但常把每一句拆开。展示卡片一律保留原文标题和段落层级。
+  // AI 负责理解段落语义；不完整或含网页噪音时才退回原文规则。
   const structured = analyzeJDByRules(jdRaw)
   return {
-    responsibilitySections: structured.responsibilitySections,
-    requirementSections: structured.requirementSections,
+    responsibilitySections: normalizeAiSections(raw.responsibilitySections, structured.responsibilitySections),
+    requirementSections: normalizeAiSections(raw.requirementSections, structured.requirementSections),
     education: arr(raw.education),
     experience: arr(raw.experience),
     hardSkills: arr(raw.hardSkills),
