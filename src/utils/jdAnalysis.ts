@@ -16,7 +16,7 @@ const ANALYZE_PROMPT = `你是资深 HR 和职业规划师。分析以下招聘 
 - requirements: 任职要求，拆成简洁条目（数组）
 - companySummary: 公司介绍压缩为1-2句话，非重点，不超过80字
 
-分组规则：优先保留原文的小标题（例如“团队使命”“技术风险咨询”）；同一段内的连续说明合并为一项，绝不按单句或换行逐条切开；每类最多 6 个标题、每标题最多 6 项。不要把导航、面包屑、相关职位、页脚、职位列表、校园招聘主页、职位名称或公司名放入结果。只能使用 JD 中已有的信息，不得编造。
+分组规则：优先保留原文的小标题（例如“团队使命”“技术风险咨询”）；同一段内的连续说明合并为一项，绝不按单句或换行逐条切开；但原文明确列出的 1、2、3… 编号项必须全部保留，不能为了精简而遗漏。每类最多 6 个标题、每标题最多 6 项。不要把导航、面包屑、相关职位、页脚、职位列表、校园招聘主页、职位名称或公司名放入结果。只能使用 JD 中已有的信息，不得编造。
 
 岗位描述：
 `
@@ -48,7 +48,10 @@ function normalizeAiSections(value: unknown, fallback: JdNumberedSection[]): JdN
     .slice(0, 6)
     .map((section, index) => ({ index: index + 1, ...section }))
 
-  return sections.length ? sections : fallback
+  // AI 可以合并段落，但不能漏掉原文已经明确列出的条目；少一条即回退完整原文。
+  const fallbackItemCount = fallback.reduce((total, section) => total + section.items.length, 0)
+  const aiItemCount = sections.reduce((total, section) => total + section.items.length, 0)
+  return sections.length && aiItemCount >= fallbackItemCount ? sections : fallback
 }
 
 const PROJECT_PROMPT = `你是项目导师和简历辅导专家。根据以下岗位的项目/技术/职责要求，为学生设计2-3个可在2-4周内完成的实战项目。

@@ -61,11 +61,16 @@ function isChildLabel(line: string, hasParent: boolean): boolean {
 export function extractJobBlocks(text: string): { responsibilities: string; requirements: string } {
   const lines = normalizedLines(text)
   const collect = (heading: RegExp) => {
-    const start = lines.findIndex((line) => heading.test(line))
+    // Boss 等网站常把标题写成「【工作职责】」，判断时去掉装饰括号，正文仍原样保留。
+    const candidates = lines
+      .map((line, index) => (heading.test(cleanTitle(line)) ? index : -1))
+      .filter((index) => index >= 0)
+    // 「职位描述」往往只是外层容器，紧跟的「工作职责」才是真正的内容起点。
+    const start = candidates.find((index) => !/^职位描述\s*[：:]?$/.test(cleanTitle(lines[index]))) ?? candidates[0] ?? -1
     if (start < 0) return ''
     const result: string[] = []
     for (const line of lines.slice(start + 1)) {
-      if (MAIN_HEADING.test(line) || END_OF_JD.test(cleanTitle(line))) break
+      if (MAIN_HEADING.test(cleanTitle(line)) || END_OF_JD.test(cleanTitle(line))) break
       result.push(line)
     }
     return result.join('\n').trim()
@@ -75,9 +80,9 @@ export function extractJobBlocks(text: string): { responsibilities: string; requ
 
   // 例如：职位描述 → 你需要（工作事项）→ 你需要（任职资格）。
   // 不能把第二段要求继续塞进职责，否则会出现职责十几条、要求为空的情况。
-  const responsibilityStart = lines.findIndex((line) => RESPONSIBILITY_HEADING.test(line))
+  const responsibilityStart = lines.findIndex((line) => RESPONSIBILITY_HEADING.test(cleanTitle(line)))
   const needs = lines
-    .map((line, index) => (AMBIGUOUS_NEED_HEADING.test(line) ? index : -1))
+    .map((line, index) => (AMBIGUOUS_NEED_HEADING.test(cleanTitle(line)) ? index : -1))
     .filter((index) => index >= 0)
   if (responsibilityStart >= 0 && needs.length >= 2) {
     const end = (start: number) => {
@@ -132,7 +137,7 @@ export function buildDedupedSections(block: string, baseTitle: string, maxSectio
   // “相关职位”之后是推荐岗位和网站页脚，必须连同后续内容一起截断。
   const tailIndex = allLines.findIndex((line) => END_OF_JD.test(cleanTitle(line)))
   const lines = (tailIndex >= 0 ? allLines.slice(0, tailIndex) : allLines)
-    .filter((line) => !MAIN_HEADING.test(line) && !END_OF_JD.test(cleanTitle(line)))
+    .filter((line) => !MAIN_HEADING.test(cleanTitle(line)) && !END_OF_JD.test(cleanTitle(line)))
   if (!lines.length) return []
 
   const groups: Array<{ title: string; lines: string[] }> = []
