@@ -245,12 +245,9 @@ export function JDAnalysisPanel({
                 className="jd-collapse-trigger"
                 onClick={() => setShowCompany((v) => !v)}
               >
-                {showCompany ? '▼' : '▶'} 公司介绍（已精简，非重点）
+                {showCompany ? '▼ 收起非重点信息' : '▶ 更多 · 非重点信息'}
               </button>
               {showCompany && <p className="jd-company-summary">{display.companySummary}</p>}
-              {!showCompany && (
-                <p className="jd-company-summary collapsed">{display.companySummary.slice(0, 60)}…</p>
-              )}
             </div>
           )}
 
