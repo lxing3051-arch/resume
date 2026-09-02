@@ -4,7 +4,7 @@ import { analyzeJDByRules, ensureStructuredAnalysis, needsRuleRefresh } from '..
 import { analyzeJD } from '../utils/jdAnalysis'
 import { aiChat, isAiConfigured } from '../utils/aiProvider'
 import { saveJdAnalysis } from '../utils/jdAnalysisService'
-import { buildAnalysisSummary, buildResumeMatchPrompt } from '../utils/cursorPrompt'
+import { buildResumeMatchPrompt } from '../utils/cursorPrompt'
 
 interface Props {
   analysis?: JdAnalysis
@@ -142,12 +142,10 @@ export function JDAnalysisPanel({
       setMessage('请先录入 JD 文本')
       return
     }
-    const display = analysis ?? analyzeJDByRules(jdRaw)
     const text = buildResumeMatchPrompt({
       companyName,
       position: position || '（未填岗位名）',
       jdRaw,
-      analysisSummary: buildAnalysisSummary(display),
     })
     try {
       await navigator.clipboard.writeText(text)
