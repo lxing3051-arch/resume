@@ -71,6 +71,28 @@ export async function updateStageStatus(
   await syncCompanyStatus(companyId)
 }
 
+export async function deleteStage(stageId: number, companyId: number) {
+  await db.stages.delete(stageId)
+  const remaining = await db.stages.where('companyId').equals(companyId).sortBy('order')
+  await db.transaction('rw', db.stages, async () => {
+    await Promise.all(
+      remaining.map((stage, index) =>
+        stage.id === undefined ? Promise.resolve() : db.stages.update(stage.id, { order: index }),
+      ),
+    )
+  })
+  await syncCompanyStatus(companyId)
+}
+
+export async function rejectCompany(companyId: number) {
+  const now = new Date().toISOString()
+  await db.companies.update(companyId, {
+    rejectedAt: now,
+    status: '已结束',
+    updatedAt: now,
+  })
+}
+
 export async function addCustomStage(companyId: number, type: StageType) {
   const existing = await db.stages.where('companyId').equals(companyId).sortBy('order')
   await db.stages.add({
@@ -88,6 +110,7 @@ export async function getCompaniesFiltered(filters: {
   query?: string
 }) {
   let list = await db.companies.orderBy('updatedAt').reverse().toArray()
+  list = list.filter((company) => !company.rejectedAt)
 
   if (filters.season && filters.season !== '全部') {
     list = list.filter((c) => c.season === filters.season)

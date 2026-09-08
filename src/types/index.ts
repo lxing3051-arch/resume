@@ -45,6 +45,7 @@ export interface Company {
   resumeVersionId?: number
   jdAnalysis?: JdAnalysis
   resumeProjects?: ResumeProjectSuggestion[]
+  rejectedAt?: string
   status: ApplicationStatus
   createdAt: string
   updatedAt: string

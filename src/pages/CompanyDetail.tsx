@@ -5,7 +5,13 @@ import { Layout, StatusBadge, daysUntil } from '../components/Layout'
 import { JDAnalysisPanel } from '../components/JDAnalysisPanel'
 import { CompanyProjectLinks } from '../components/CompanyProjectLinks'
 import { db } from '../db/database'
-import { addCustomStage, updateStageStatus, deleteCompany } from '../utils/companyService'
+import {
+  addCustomStage,
+  updateStageStatus,
+  deleteCompany,
+  deleteStage,
+  rejectCompany,
+} from '../utils/companyService'
 import { createInterviewNote, updateStageSchedule } from '../utils/noteService'
 import { downloadResumeFile } from '../utils/resumeService'
 import type { StageStatus, StageType } from '../types'
@@ -44,6 +50,17 @@ export default function CompanyDetail() {
     navigate('/')
   }
 
+  async function handleDeleteStage(stageId: number, stageType: StageType) {
+    if (!confirm(`确定删除“${stageType}”阶段？`)) return
+    await deleteStage(stageId, companyId)
+  }
+
+  async function handleReject() {
+    if (!confirm('确定标记为已拒？标记后将不再显示在投递看板。')) return
+    await rejectCompany(companyId)
+    navigate('/')
+  }
+
   async function handleAddNote(e: React.FormEvent) {
     e.preventDefault()
     if (!noteTitle.trim() || !noteContent.trim() || !company) return
@@ -64,7 +81,14 @@ export default function CompanyDetail() {
           <Link to="/" className="back-link">
             ← 返回看板
           </Link>
-          <h1>{company.name}</h1>
+          <div className="detail-title-row">
+            <h1>{company.name}</h1>
+            {company.bossUrl && (
+              <a href={company.bossUrl} target="_blank" rel="noreferrer" className="job-link">
+                职位链接 ↗
+              </a>
+            )}
+          </div>
           <p>{company.position}</p>
         </div>
         <div className="header-actions">
@@ -88,19 +112,33 @@ export default function CompanyDetail() {
       <section className="panel panel-stages">
         <div className="panel-head">
           <h2>进度跟踪</h2>
-          <button
-            className="btn ghost"
-            type="button"
-            onClick={() => addCustomStage(companyId, '其他')}
-          >
-            + 阶段
-          </button>
+          <div className="panel-actions">
+            <button className="btn danger" type="button" onClick={handleReject}>
+              已拒
+            </button>
+            <button
+              className="btn ghost"
+              type="button"
+              onClick={() => addCustomStage(companyId, '其他')}
+            >
+              + 阶段
+            </button>
+          </div>
         </div>
         <div className="stage-pipeline">
           {stageList.map((stage, index) => (
             <div key={stage.id} className="stage-pipeline-item">
               {index > 0 && <div className="stage-pipeline-line" aria-hidden />}
               <div className="stage-block" data-status={stage.status}>
+                <button
+                  className="stage-delete"
+                  type="button"
+                  aria-label={`删除${stage.type}阶段`}
+                  title="删除阶段"
+                  onClick={() => handleDeleteStage(stage.id!, stage.type)}
+                >
+                  ×
+                </button>
                 <div className="stage-row">
                   <strong>{stage.type}</strong>
                   <select
@@ -252,13 +290,6 @@ export default function CompanyDetail() {
 
       <section className="panel">
         <h2>其他信息</h2>
-        <div className="detail-meta">
-          {company.bossUrl && (
-            <a href={company.bossUrl} target="_blank" rel="noreferrer">
-              职位链接
-            </a>
-          )}
-        </div>
         {company.notes && <pre className="text-block">{company.notes}</pre>}
         <button className="btn danger" type="button" onClick={handleDelete}>
           删除记录
