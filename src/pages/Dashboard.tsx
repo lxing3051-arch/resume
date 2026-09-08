@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { useMemo, useState } from 'react'
 import { Layout, EmptyState, daysUntil } from '../components/Layout'
 import { CompanyCard } from '../components/CompanyCard'
+import { db } from '../db/database'
 import { getCompaniesFiltered } from '../utils/companyService'
 import { computeTodos } from '../utils/statsService'
 import type { ApplicationStatus, Season } from '../types'
@@ -29,18 +30,19 @@ export default function Dashboard() {
     () => getCompaniesFiltered({ season, status, year, query }),
     [season, status, year, query],
   )
+  const totalCompanies = useLiveQuery(() => db.companies.count())
 
   const todos = useLiveQuery(() => computeTodos())
 
   const stats = useMemo(() => {
-    if (!companies) return null
+    if (!companies || totalCompanies === undefined) return null
     return {
-      total: companies.length,
+      total: totalCompanies,
       active: companies.filter((c) => !['已OC', '已结束'].includes(c.status)).length,
       interview: companies.filter((c) => c.status === '面试中').length,
       urgent: companies.filter((c) => daysUntil(c.deadline)).length,
     }
-  }, [companies])
+  }, [companies, totalCompanies])
 
   return (
     <Layout>

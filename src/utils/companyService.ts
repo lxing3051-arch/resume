@@ -110,7 +110,13 @@ export async function getCompaniesFiltered(filters: {
   query?: string
 }) {
   let list = await db.companies.orderBy('updatedAt').reverse().toArray()
-  list = list.filter((company) => !company.rejectedAt)
+  const completedRejections = await db.stages
+    .filter((stage) => stage.type === '拒信' && stage.status === '已完成')
+    .toArray()
+  const rejectedCompanyIds = new Set(completedRejections.map((stage) => stage.companyId))
+  list = list.filter(
+    (company) => !company.rejectedAt && !rejectedCompanyIds.has(company.id ?? -1),
+  )
 
   if (filters.season && filters.season !== '全部') {
     list = list.filter((c) => c.season === filters.season)
