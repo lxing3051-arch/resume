@@ -1,5 +1,5 @@
 import { useLiveQuery } from 'dexie-react-hooks'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { useMemo, useState } from 'react'
 import { Layout, EmptyState, daysUntil } from '../components/Layout'
 import { CompanyCard } from '../components/CompanyCard'
@@ -25,12 +25,15 @@ export default function Dashboard() {
   const [status, setStatus] = useState<ApplicationStatus | '全部'>('全部')
   const [year, setYear] = useState<number | '全部'>(new Date().getFullYear())
   const [query, setQuery] = useState('')
+  const [searchParams, setSearchParams] = useSearchParams()
+  const rejectedOnly = searchParams.get('view') === 'rejected'
 
   const companies = useLiveQuery(
-    () => getCompaniesFiltered({ season, status, year, query }),
-    [season, status, year, query],
+    () => getCompaniesFiltered({ season, status, year, query, rejectedOnly }),
+    [season, status, year, query, rejectedOnly],
   )
   const totalCompanies = useLiveQuery(() => db.companies.count())
+  const rejectedCompanies = useLiveQuery(() => getCompaniesFiltered({ rejectedOnly: true }))
 
   const todos = useLiveQuery(() => computeTodos())
 
@@ -48,15 +51,28 @@ export default function Dashboard() {
     <Layout>
       <div className="page-header">
         <div>
-          <h1>投递看板</h1>
+          <h1>{rejectedOnly ? '已拒记录' : '投递看板'}</h1>
           <p className="muted">数据保存在本机浏览器，零服务器费用</p>
         </div>
-        <Link to="/stats" className="btn ghost">
-          今日待办
-        </Link>
-        <Link to="/company/new" className="btn primary">
-          + 添加公司
-        </Link>
+        <div className="header-actions">
+          <button
+            type="button"
+            className="btn ghost"
+            onClick={() => setSearchParams(rejectedOnly ? {} : { view: 'rejected' })}
+          >
+            {rejectedOnly ? '← 返回看板' : `查看已拒 (${rejectedCompanies?.length ?? 0})`}
+          </button>
+          {!rejectedOnly && (
+            <>
+              <Link to="/stats" className="btn ghost">
+                今日待办
+              </Link>
+              <Link to="/company/new" className="btn primary">
+                + 添加公司
+              </Link>
+            </>
+          )}
+        </div>
       </div>
 
       {stats && (
@@ -135,7 +151,14 @@ export default function Dashboard() {
       </div>
 
       {!companies?.length ? (
-        <EmptyState title="还没有公司记录" hint="上传 Boss 直聘截图，自动识别 JD 并跟踪进度" />
+        <EmptyState
+          title={rejectedOnly ? '没有已拒记录' : '还没有公司记录'}
+          hint={
+            rejectedOnly
+              ? '标记为已拒的职位会集中显示在这里'
+              : '上传 Boss 直聘截图，自动识别 JD 并跟踪进度'
+          }
+        />
       ) : (
         <div className="card-grid">
           {companies.map((company) => (

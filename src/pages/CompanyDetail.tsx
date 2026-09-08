@@ -11,6 +11,7 @@ import {
   deleteCompany,
   deleteStage,
   rejectCompany,
+  restoreRejectedCompany,
 } from '../utils/companyService'
 import { createInterviewNote, updateStageSchedule } from '../utils/noteService'
 import { downloadResumeFile } from '../utils/resumeService'
@@ -43,6 +44,9 @@ export default function CompanyDetail() {
   if (!company) return <Layout>未找到该公司</Layout>
 
   const stageList = stages ?? []
+  const isRejected =
+    Boolean(company.rejectedAt) ||
+    stageList.some((stage) => stage.type === '拒信' && stage.status === '已完成')
 
   async function handleDelete() {
     if (!confirm('确定删除这条记录？')) return
@@ -58,6 +62,11 @@ export default function CompanyDetail() {
   async function handleReject() {
     if (!confirm('确定标记为已拒？标记后将不再显示在投递看板。')) return
     await rejectCompany(companyId)
+    navigate('/')
+  }
+
+  async function handleRestore() {
+    await restoreRejectedCompany(companyId)
     navigate('/')
   }
 
@@ -78,8 +87,8 @@ export default function CompanyDetail() {
     <Layout>
       <div className="page-header">
         <div>
-          <Link to="/" className="back-link">
-            ← 返回看板
+          <Link to={isRejected ? '/?view=rejected' : '/'} className="back-link">
+            ← {isRejected ? '返回已拒记录' : '返回看板'}
           </Link>
           <div className="detail-title-row">
             <h1>{company.name}</h1>
@@ -113,9 +122,15 @@ export default function CompanyDetail() {
         <div className="panel-head">
           <h2>进度跟踪</h2>
           <div className="panel-actions">
-            <button className="btn danger" type="button" onClick={handleReject}>
-              已拒
-            </button>
+            {isRejected ? (
+              <button className="btn primary" type="button" onClick={handleRestore}>
+                恢复到看板
+              </button>
+            ) : (
+              <button className="btn danger" type="button" onClick={handleReject}>
+                已拒
+              </button>
+            )}
             <button
               className="btn ghost"
               type="button"

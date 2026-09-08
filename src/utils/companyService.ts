@@ -93,6 +93,28 @@ export async function rejectCompany(companyId: number) {
   })
 }
 
+export async function restoreRejectedCompany(companyId: number) {
+  const rejectedStages = await db.stages
+    .where('companyId')
+    .equals(companyId)
+    .filter((stage) => stage.type === '拒信' && stage.status === '已完成')
+    .toArray()
+  await db.transaction('rw', db.companies, db.stages, async () => {
+    await Promise.all(
+      rejectedStages.map((stage) =>
+        stage.id === undefined
+          ? Promise.resolve()
+          : db.stages.update(stage.id, { status: '已跳过', completedAt: undefined }),
+      ),
+    )
+    await db.companies.update(companyId, {
+      rejectedAt: undefined,
+      updatedAt: new Date().toISOString(),
+    })
+  })
+  await syncCompanyStatus(companyId)
+}
+
 export async function addCustomStage(companyId: number, type: StageType) {
   const existing = await db.stages.where('companyId').equals(companyId).sortBy('order')
   await db.stages.add({
@@ -108,15 +130,17 @@ export async function getCompaniesFiltered(filters: {
   year?: number | '全部'
   status?: ApplicationStatus | '全部'
   query?: string
+  rejectedOnly?: boolean
 }) {
   let list = await db.companies.orderBy('updatedAt').reverse().toArray()
   const completedRejections = await db.stages
     .filter((stage) => stage.type === '拒信' && stage.status === '已完成')
     .toArray()
   const rejectedCompanyIds = new Set(completedRejections.map((stage) => stage.companyId))
-  list = list.filter(
-    (company) => !company.rejectedAt && !rejectedCompanyIds.has(company.id ?? -1),
-  )
+  list = list.filter((company) => {
+    const rejected = Boolean(company.rejectedAt) || rejectedCompanyIds.has(company.id ?? -1)
+    return filters.rejectedOnly ? rejected : !rejected
+  })
 
   if (filters.season && filters.season !== '全部') {
     list = list.filter((c) => c.season === filters.season)
