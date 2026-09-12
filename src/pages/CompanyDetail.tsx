@@ -122,15 +122,6 @@ export default function CompanyDetail() {
         <div className="panel-head">
           <h2>进度跟踪</h2>
           <div className="panel-actions">
-            {isRejected ? (
-              <button className="btn primary" type="button" onClick={handleRestore}>
-                恢复到看板
-              </button>
-            ) : (
-              <button className="btn danger" type="button" onClick={handleReject}>
-                已拒
-              </button>
-            )}
             <button
               className="btn ghost"
               type="button"
@@ -306,9 +297,20 @@ export default function CompanyDetail() {
       <section className="panel">
         <h2>其他信息</h2>
         {company.notes && <pre className="text-block">{company.notes}</pre>}
-        <button className="btn danger" type="button" onClick={handleDelete}>
-          删除记录
-        </button>
+        <div className="record-actions">
+          <button className="btn danger" type="button" onClick={handleDelete}>
+            删除记录
+          </button>
+          {isRejected ? (
+            <button className="btn primary" type="button" onClick={handleRestore}>
+              恢复到看板
+            </button>
+          ) : (
+            <button className="btn danger" type="button" onClick={handleReject}>
+              已拒
+            </button>
+          )}
+        </div>
       </section>
     </Layout>
   )
