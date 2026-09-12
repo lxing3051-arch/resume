@@ -7,7 +7,7 @@ import { jdRawFingerprint } from '../utils/jdFingerprint'
 import { recognizeImage } from '../utils/ocr'
 import { JDAnalysisPanel } from './JDAnalysisPanel'
 import type { ResumeVersion, Season } from '../types'
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 
 interface Props {
   form: CompanyFormData
@@ -61,15 +61,34 @@ export function CompanyForm({
     onChange(patch)
   }
 
-  async function handleImage(file: File) {
+  const handleImage = useCallback(async (file: File) => {
     setOcrProgress(0)
+    setImportHint('已读取截图，正在进行 OCR...')
     try {
       const text = await recognizeImage(file, setOcrProgress)
-      update(applyParsed(form, text))
+      onChange(applyParsed(formRef.current, text))
+      setImportHint('截图识别完成，已自动填写职位信息')
+    } catch {
+      setImportHint('截图识别失败，请换一张更清晰的截图后重试')
     } finally {
       setOcrProgress(null)
     }
-  }
+  }, [onChange])
+
+  useEffect(() => {
+    if (!showOcr) return
+    function handlePaste(event: ClipboardEvent) {
+      const imageItem = Array.from(event.clipboardData?.items ?? []).find(
+        (item) => item.kind === 'file' && item.type.startsWith('image/'),
+      )
+      const image = imageItem?.getAsFile()
+      if (!image) return
+      event.preventDefault()
+      void handleImage(image)
+    }
+    window.addEventListener('paste', handlePaste)
+    return () => window.removeEventListener('paste', handlePaste)
+  }, [handleImage, showOcr])
 
   function handleJdRawChange(text: string) {
     update({ jdRaw: text })
@@ -133,7 +152,9 @@ export function CompanyForm({
               hidden
               onChange={(e) => e.target.files?.[0] && handleImage(e.target.files[0])}
             />
-            <span>{ocrProgress !== null ? `识别中 ${ocrProgress}%` : '点击上传截图'}</span>
+            <span>
+              {ocrProgress !== null ? `识别中 ${ocrProgress}%` : '点击上传截图，或复制截图后按 Ctrl + V'}
+            </span>
           </label>
           <label className="field">
             <span>粘贴任意职位文本</span>
