@@ -1,4 +1,4 @@
-const DEFAULT_APP_URL = 'http://localhost:5173'
+const DEFAULT_APP_URL = 'https://lxing3051-arch.github.io/resume'
 
 chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
   if (msg.type === 'OPEN_APP_IMPORT') {

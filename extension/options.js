@@ -1,7 +1,7 @@
 const input = document.getElementById('appUrl')
 const msg = document.getElementById('msg')
 
-chrome.storage.sync.get({ appUrl: 'http://localhost:5173' }, (data) => {
+chrome.storage.sync.get({ appUrl: 'https://lxing3051-arch.github.io/resume' }, (data) => {
   input.value = data.appUrl
 })
 
