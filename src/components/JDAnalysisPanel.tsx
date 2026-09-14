@@ -17,7 +17,7 @@ interface Props {
   autoRefresh?: boolean
 }
 
-function SubCards({ items }: { items: string[] }) {
+function SubCards({ items, onDelete }: { items: string[]; onDelete: (itemIndex: number) => void }) {
   if (!items.length) return <p className="muted small">暂无</p>
   return (
     <div className="jd-subcard-grid">
@@ -25,22 +25,40 @@ function SubCards({ items }: { items: string[] }) {
         <article key={i} className="jd-subcard">
           <span className="jd-subcard-index">{i + 1}</span>
           <p>{item}</p>
+          <button
+            type="button"
+            className="jd-card-delete"
+            aria-label={`删除：${item}`}
+            title="删除这条内容"
+            onClick={() => onDelete(i)}
+          >
+            ×
+          </button>
         </article>
       ))}
     </div>
   )
 }
 
-function NumberedCards({ sections }: { sections: JdNumberedSection[] }) {
+function NumberedCards({
+  sections,
+  onDeleteItem,
+}: {
+  sections: JdNumberedSection[]
+  onDeleteItem: (sectionIndex: number, itemIndex: number) => void
+}) {
   if (!sections.length) return <p className="muted small">暂无</p>
   return (
     <div className="jd-numbered-grid">
-      {sections.map((section) => (
+      {sections.map((section, sectionIndex) => (
         <article key={`${section.index}-${section.title}`} className="jd-numbered-card">
           <h4>
             {section.index}. {section.title}
           </h4>
-          <SubCards items={section.items} />
+          <SubCards
+            items={section.items}
+            onDelete={(itemIndex) => onDeleteItem(sectionIndex, itemIndex)}
+          />
         </article>
       ))}
     </div>
@@ -74,6 +92,7 @@ export function JDAnalysisPanel({
 
   useEffect(() => {
     if (!autoRefresh || !jdRaw.trim()) return
+    if (initialAnalysis?.manuallyEdited) return
     // 插件导入时已保存的分段往往比纯原始网页文本更准确。
     // 详情页再次按规则解析会把这份结果覆盖成“暂无”，因此仅为旧记录补一次空分析。
     if (
@@ -106,6 +125,24 @@ export function JDAnalysisPanel({
     } finally {
       setClassifying(false)
     }
+  }
+
+  async function handleDeleteItem(
+    field: 'responsibilitySections' | 'requirementSections',
+    sectionIndex: number,
+    itemIndex: number,
+  ) {
+    if (!analysis) return
+    const sections = analysis[field]
+      .map((section, index) =>
+        index === sectionIndex
+          ? { ...section, items: section.items.filter((_, item) => item !== itemIndex) }
+          : section,
+      )
+      .filter((section) => section.items.length)
+      .map((section, index) => ({ ...section, index: index + 1 }))
+    await persistAnalysis({ ...analysis, [field]: sections, manuallyEdited: true })
+    setMessage('已删除并保存这条内容')
   }
 
   async function handleAskAi() {
@@ -212,12 +249,22 @@ export function JDAnalysisPanel({
         <>
           <div className="jd-major-block">
             <h3 className="jd-block-title">岗位职责</h3>
-            <NumberedCards sections={display.responsibilitySections} />
+            <NumberedCards
+              sections={display.responsibilitySections}
+              onDeleteItem={(sectionIndex, itemIndex) =>
+                void handleDeleteItem('responsibilitySections', sectionIndex, itemIndex)
+              }
+            />
           </div>
 
           <div className="jd-major-block">
             <h3 className="jd-block-title">任职要求</h3>
-            <NumberedCards sections={display.requirementSections} />
+            <NumberedCards
+              sections={display.requirementSections}
+              onDeleteItem={(sectionIndex, itemIndex) =>
+                void handleDeleteItem('requirementSections', sectionIndex, itemIndex)
+              }
+            />
             {display.hardSkills.length > 0 && (
               <div className="jd-skills-row">
                 <span className="muted small">提取的技术栈：</span>

@@ -17,7 +17,7 @@ export interface AnalyzeOptions {
 }
 
 // 改动分段规则后，旧的规则分类必须自动重算，不能继续展示缓存的逐句卡片。
-export const JD_RULES_VERSION = '2026-08-18.5'
+export const JD_RULES_VERSION = '2026-09-14.1'
 
 export function needsRuleRefresh(analysis: JdAnalysis | undefined): boolean {
   // AI 只负责补充技能和摘要，卡片层级始终由原文分段规则决定。
@@ -118,6 +118,7 @@ export function mergeSkillsFromAnalysis(analysis: JdAnalysis, existing: string[]
 
 /** 旧版分析无 sections 时，用 jdRaw 重算 */
 export function ensureStructuredAnalysis(analysis: JdAnalysis | undefined, jdRaw: string): JdAnalysis {
+  if (analysis?.manuallyEdited) return analysis
   if ((analysis?.responsibilitySections?.length || analysis?.requirementSections?.length) && !needsRuleRefresh(analysis)) {
     return analysis
   }

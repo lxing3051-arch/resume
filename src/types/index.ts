@@ -135,6 +135,8 @@ export interface JdAnalysis {
   /** 用于在规则升级后自动刷新旧的本地分类结果。 */
   rulesVersion?: string
   jdRawFingerprint?: string
+  /** 用户手动删改过分析卡片，避免页面加载时被规则分析覆盖。 */
+  manuallyEdited?: boolean
 }
 
 export interface ProjectStep {

@@ -11,7 +11,7 @@ const END_OF_JD = /^(?:相关职位|相关推荐|推荐职位|职位推荐|联�
 const PAGE_NOISE = /(?::where\(|\.css-[\w-]+|--[\w-]+:|font-family:|clip-path:|@media\s*\()/i
 const FOOTER_NOISE = /^(?:字节跳动(?:\s+Seed)?团队|关注我们获取最新动态|候选人反馈平台|官网使用体验反馈|京公网安备)/
 // 招聘官网常把导航、面包屑和当前职位标题一并放进正文 textContent；这些不是 JD。
-const NAVIGATION_NOISE = /^(?:职位列表|校园招聘主页|招聘首页|首页\s*\/\s*职位列表\s*\/\s*职位详情|首页\s*\/\s*职位列表|职位详情|分享|举报)$/i
+const NAVIGATION_NOISE = /^(?:职位列表|校园招聘主页|招聘首页|校园招聘|实习招聘|社会招聘|招聘进度|招聘流程|关于(?:我们|公司|留音)|创始人寄语|首页\s*\/\s*职位列表\s*\/\s*职位详情|首页\s*\/\s*职位列表|职位详情|分享|举报)$/i
 
 function normalizedLines(text: string): string[] {
   return text
