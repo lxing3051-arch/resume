@@ -1155,10 +1155,14 @@ code {
   display: flex;
   gap: 9px;
   align-items: flex-start;
-  padding: 10px 36px 10px 11px;
+  padding: 10px 11px;
   border: 1px solid var(--border-light);
   border-radius: 8px;
   background: var(--surface-muted);
+}
+
+.jd-subcard:has(.jd-card-delete) {
+  padding-right: 36px;
 }
 
 .jd-card-delete {

@@ -17,7 +17,7 @@ interface Props {
   autoRefresh?: boolean
 }
 
-function SubCards({ items, onDelete }: { items: string[]; onDelete: (itemIndex: number) => void }) {
+function SubCards({ items, onDelete }: { items: string[]; onDelete?: (itemIndex: number) => void }) {
   if (!items.length) return <p className="muted small">暂无</p>
   return (
     <div className="jd-subcard-grid">
@@ -25,15 +25,17 @@ function SubCards({ items, onDelete }: { items: string[]; onDelete: (itemIndex: 
         <article key={i} className="jd-subcard">
           <span className="jd-subcard-index">{i + 1}</span>
           <p>{item}</p>
-          <button
-            type="button"
-            className="jd-card-delete"
-            aria-label={`删除：${item}`}
-            title="删除这条内容"
-            onClick={() => onDelete(i)}
-          >
-            ×
-          </button>
+          {onDelete && (
+            <button
+              type="button"
+              className="jd-card-delete"
+              aria-label={`删除：${item}`}
+              title="删除这条内容"
+              onClick={() => onDelete(i)}
+            >
+              ×
+            </button>
+          )}
         </article>
       ))}
     </div>
@@ -45,7 +47,7 @@ function NumberedCards({
   onDeleteItem,
 }: {
   sections: JdNumberedSection[]
-  onDeleteItem: (sectionIndex: number, itemIndex: number) => void
+  onDeleteItem?: (sectionIndex: number, itemIndex: number) => void
 }) {
   if (!sections.length) return <p className="muted small">暂无</p>
   return (
@@ -57,7 +59,9 @@ function NumberedCards({
           </h4>
           <SubCards
             items={section.items}
-            onDelete={(itemIndex) => onDeleteItem(sectionIndex, itemIndex)}
+            onDelete={
+              onDeleteItem ? (itemIndex) => onDeleteItem(sectionIndex, itemIndex) : undefined
+            }
           />
         </article>
       ))}
@@ -220,7 +224,9 @@ export function JDAnalysisPanel({
       </div>
 
       <p className="hint muted small">
-        按原文小标题归类；小标题是卡片标题，下面的职责和要求以同级小卡片展示。
+        {onAnalysisChange
+          ? '请在保存公司前检查识别结果；无关卡片可点击右上角 × 删除，删减结果会随公司一起保存。'
+          : '按原文小标题归类；小标题是卡片标题，下面的职责和要求以同级小卡片展示。'}
       </p>
       {message && <p className="hint">{message}</p>}
 
@@ -251,8 +257,11 @@ export function JDAnalysisPanel({
             <h3 className="jd-block-title">岗位职责</h3>
             <NumberedCards
               sections={display.responsibilitySections}
-              onDeleteItem={(sectionIndex, itemIndex) =>
-                void handleDeleteItem('responsibilitySections', sectionIndex, itemIndex)
+              onDeleteItem={
+                onAnalysisChange
+                  ? (sectionIndex, itemIndex) =>
+                      void handleDeleteItem('responsibilitySections', sectionIndex, itemIndex)
+                  : undefined
               }
             />
           </div>
@@ -261,8 +270,11 @@ export function JDAnalysisPanel({
             <h3 className="jd-block-title">任职要求</h3>
             <NumberedCards
               sections={display.requirementSections}
-              onDeleteItem={(sectionIndex, itemIndex) =>
-                void handleDeleteItem('requirementSections', sectionIndex, itemIndex)
+              onDeleteItem={
+                onAnalysisChange
+                  ? (sectionIndex, itemIndex) =>
+                      void handleDeleteItem('requirementSections', sectionIndex, itemIndex)
+                  : undefined
               }
             />
             {display.hardSkills.length > 0 && (
