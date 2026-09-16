@@ -17,24 +17,75 @@ interface Props {
   autoRefresh?: boolean
 }
 
-function SubCards({ items, onDelete }: { items: string[]; onDelete?: (itemIndex: number) => void }) {
+function SubCards({
+  items,
+  onDelete,
+  onEdit,
+}: {
+  items: string[]
+  onDelete?: (itemIndex: number) => void
+  onEdit?: (itemIndex: number, value: string) => void
+}) {
+  const [editingIndex, setEditingIndex] = useState<number | null>(null)
+  const [draft, setDraft] = useState('')
   if (!items.length) return <p className="muted small">暂无</p>
   return (
     <div className="jd-subcard-grid">
       {items.map((item, i) => (
         <article key={i} className="jd-subcard">
           <span className="jd-subcard-index">{i + 1}</span>
-          <p>{item}</p>
-          {onDelete && (
-            <button
-              type="button"
-              className="jd-card-delete"
-              aria-label={`删除：${item}`}
-              title="删除这条内容"
-              onClick={() => onDelete(i)}
-            >
-              ×
-            </button>
+          {editingIndex === i ? (
+            <div className="jd-card-editor">
+              <textarea rows={3} value={draft} onChange={(event) => setDraft(event.target.value)} />
+              <div className="jd-card-editor-actions">
+                <button
+                  type="button"
+                  className="btn primary"
+                  disabled={draft.replace(/[^\p{L}\p{N}]/gu, '').length < 10}
+                  onClick={() => {
+                    onEdit?.(i, draft.trim())
+                    setEditingIndex(null)
+                  }}
+                >
+                  保存
+                </button>
+                <button className="btn ghost" type="button" onClick={() => setEditingIndex(null)}>
+                  取消
+                </button>
+              </div>
+              {draft.replace(/[^\p{L}\p{N}]/gu, '').length < 10 && (
+                <span className="muted small">请填写至少 10 个有效字符的完整句子</span>
+              )}
+            </div>
+          ) : (
+            <p>{item}</p>
+          )}
+          {(onEdit || onDelete) && editingIndex !== i && (
+            <div className="jd-card-actions">
+              {onEdit && (
+                <button
+                  type="button"
+                  className="jd-card-edit"
+                  onClick={() => {
+                    setDraft(item)
+                    setEditingIndex(i)
+                  }}
+                >
+                  编辑
+                </button>
+              )}
+              {onDelete && (
+                <button
+                  type="button"
+                  className="jd-card-delete"
+                  aria-label={`删除：${item}`}
+                  title="删除这条内容"
+                  onClick={() => onDelete(i)}
+                >
+                  ×
+                </button>
+              )}
+            </div>
           )}
         </article>
       ))}
@@ -45,9 +96,11 @@ function SubCards({ items, onDelete }: { items: string[]; onDelete?: (itemIndex:
 function NumberedCards({
   sections,
   onDeleteItem,
+  onEditItem,
 }: {
   sections: JdNumberedSection[]
   onDeleteItem?: (sectionIndex: number, itemIndex: number) => void
+  onEditItem?: (sectionIndex: number, itemIndex: number, value: string) => void
 }) {
   if (!sections.length) return <p className="muted small">暂无</p>
   return (
@@ -61,6 +114,11 @@ function NumberedCards({
             items={section.items}
             onDelete={
               onDeleteItem ? (itemIndex) => onDeleteItem(sectionIndex, itemIndex) : undefined
+            }
+            onEdit={
+              onEditItem
+                ? (itemIndex, value) => onEditItem(sectionIndex, itemIndex, value)
+                : undefined
             }
           />
         </article>
@@ -147,6 +205,22 @@ export function JDAnalysisPanel({
       .map((section, index) => ({ ...section, index: index + 1 }))
     await persistAnalysis({ ...analysis, [field]: sections, manuallyEdited: true })
     setMessage('已删除并保存这条内容')
+  }
+
+  async function handleEditRequirement(sectionIndex: number, itemIndex: number, value: string) {
+    if (!analysis) return
+    const requirementSections = analysis.requirementSections.map((section, index) =>
+      index === sectionIndex
+        ? {
+            ...section,
+            items: section.items.map((item, itemPosition) =>
+              itemPosition === itemIndex ? value : item,
+            ),
+          }
+        : section,
+    )
+    await persistAnalysis({ ...analysis, requirementSections, manuallyEdited: true })
+    setMessage('已修改并保存这条任职要求')
   }
 
   async function handleAskAi() {
@@ -274,6 +348,12 @@ export function JDAnalysisPanel({
                 onAnalysisChange
                   ? (sectionIndex, itemIndex) =>
                       void handleDeleteItem('requirementSections', sectionIndex, itemIndex)
+                  : undefined
+              }
+              onEditItem={
+                onAnalysisChange
+                  ? (sectionIndex, itemIndex, value) =>
+                      void handleEditRequirement(sectionIndex, itemIndex, value)
                   : undefined
               }
             />

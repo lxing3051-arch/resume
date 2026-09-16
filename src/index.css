@@ -1179,29 +1179,74 @@ code {
   background: var(--surface-muted);
 }
 
-.jd-subcard:has(.jd-card-delete) {
-  padding-right: 36px;
+.jd-subcard:has(.jd-card-actions) {
+  padding-right: 76px;
 }
 
-.jd-card-delete {
+.jd-card-actions {
   position: absolute;
   top: 7px;
   right: 7px;
-  width: 24px;
-  height: 24px;
-  padding: 0;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.jd-card-edit,
+.jd-card-delete {
   border: 0;
-  border-radius: 50%;
   background: transparent;
   color: var(--text-muted);
-  font-size: 1.15rem;
-  line-height: 1;
   cursor: pointer;
 }
 
+.jd-card-edit {
+  padding: 3px 5px;
+  border-radius: 5px;
+  font-size: 0.75rem;
+}
+
+.jd-card-delete {
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border-radius: 50%;
+  font-size: 1.15rem;
+  line-height: 1;
+}
+
+.jd-card-edit:hover,
 .jd-card-delete:hover {
   color: #dc2626;
   background: var(--danger-bg);
+}
+
+.jd-card-editor {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.jd-card-editor textarea {
+  width: 100%;
+  resize: vertical;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px;
+  font: inherit;
+  color: var(--text);
+  background: var(--surface);
+}
+
+.jd-card-editor-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.jd-card-editor-actions .btn {
+  padding: 5px 10px;
+  font-size: 0.8rem;
 }
 
 .jd-subcard-index {
