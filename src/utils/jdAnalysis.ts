@@ -2,6 +2,7 @@ import type { JdAnalysis, JdNumberedSection, ResumeProjectSuggestion } from '../
 import { analyzeJDByRules } from './jdAnalyzer'
 import { aiGenerateJson, isAiAvailable, isAiConfigured } from './aiProvider'
 import { createProjectId, jdRawFingerprint } from './jdFingerprint'
+import { isCompleteJdSentence } from './jdTextSections'
 
 const ANALYZE_PROMPT = `你是资深 HR 和职业规划师。分析以下招聘 JD，提取并分类信息。
 只输出 JSON，不要其他文字。字段说明：
@@ -16,7 +17,7 @@ const ANALYZE_PROMPT = `你是资深 HR 和职业规划师。分析以下招聘 
 - requirements: 任职要求，拆成简洁条目（数组）
 - companySummary: 公司介绍压缩为1-2句话，非重点，不超过80字
 
-分组规则：优先保留原文的小标题（例如“团队使命”“技术风险咨询”）；同一段内的连续说明合并为一项，绝不按单句或换行逐条切开；但原文明确列出的 1、2、3… 编号项必须全部保留，不能为了精简而遗漏。每类最多 6 个标题、每标题最多 6 项。不要把导航、面包屑、相关职位、页脚、职位列表、校园招聘主页、职位名称或公司名放入结果。只能使用 JD 中已有的信息，不得编造。
+分组规则：优先保留原文的小标题（例如“团队使命”“技术风险咨询”）；同一段内的连续说明合并为一项，绝不按单句或换行逐条切开；每个 items 条目必须是至少 10 个有效字符的完整长句，禁止输出四五字标签或残缺短语。但原文明确列出的 1、2、3… 编号项只要是完整句子就必须保留。每类最多 6 个标题、每标题最多 6 项。不要把导航、面包屑、相关职位、页脚、职位列表、校园招聘主页、职位名称或公司名放入结果。只能使用 JD 中已有的信息，不得编造。
 
 岗位描述：
 `
@@ -34,7 +35,7 @@ function normalizeAiSections(value: unknown, fallback: JdNumberedSection[]): JdN
       if (!title || title.length > 48 || AI_NOISE.test(title) || !Array.isArray(record.items)) return null
       const items = record.items
         .map((item) => String(item).replace(/\s+/g, ' ').trim())
-        .filter((item) => item.length >= 4 && item.length <= 500 && !AI_NOISE.test(item))
+        .filter((item) => isCompleteJdSentence(item) && item.length <= 500 && !AI_NOISE.test(item))
         .filter((item) => {
           const key = item.replace(/\s+/g, '')
           if (seen.some((previous) => previous === key)) return false

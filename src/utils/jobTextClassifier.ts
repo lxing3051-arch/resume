@@ -76,7 +76,7 @@ function classifyUnheadedLines(text: string): Pick<CompanyFormData, 'responsibil
   const lines = text
     .split('\n')
     .map((line) => line.trim())
-    .filter((line) => line.length >= 8 && line.length <= 300)
+    .filter((line) => line.replace(/[^\p{L}\p{N}]/gu, '').length >= 10 && line.length <= 300)
   const responsibilities = lines.filter((line) => /负责|参与|协助|推进|设计|开发|维护|跟进|完成|协调|对接/.test(line))
   const requirements = lines.filter((line) => /要求|熟悉|掌握|具备|本科|学历|经验|能力|优先|了解|至少/.test(line))
   return {

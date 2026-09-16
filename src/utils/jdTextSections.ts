@@ -13,6 +13,12 @@ const FOOTER_NOISE = /^(?:字节跳动(?:\s+Seed)?团队|关注我们获取最�
 // 招聘官网常把导航、面包屑和当前职位标题一并放进正文 textContent；这些不是 JD。
 const NAVIGATION_NOISE = /^(?:职位列表|校园招聘主页|招聘首页|校园招聘|实习招聘|社会招聘|招聘进度|招聘流程|关于(?:我们|公司|留音)|创始人寄语|首页\s*\/\s*职位列表\s*\/\s*职位详情|首页\s*\/\s*职位列表|职位详情|分享|举报)$/i
 
+/** 录入卡片必须是完整描述，排除四五字标签、导航词和残缺短语。 */
+export function isCompleteJdSentence(text: string): boolean {
+  const meaningfulLength = text.replace(/[^\p{L}\p{N}]/gu, '').length
+  return meaningfulLength >= 10
+}
+
 function normalizedLines(text: string): string[] {
   return text
     .replace(/\r\n?/g, '\n')
@@ -119,7 +125,7 @@ function sectionItems(lines: string[], seen: string[]): string[] {
 
   return dedupeBullets(
     paragraphs
-      .filter((line) => line.length >= 4)
+      .filter(isCompleteJdSentence)
       .filter((line) => {
         if (seen.some((previous) => isDuplicateText(previous, line))) return false
         seen.push(line)
