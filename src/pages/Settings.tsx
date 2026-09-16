@@ -26,6 +26,7 @@ import {
   validateGeminiApiKey,
 } from '../utils/gemini'
 import type { GeminiSettings, NotificationSettings, ThemeMode } from '../types'
+import { useCloudSync } from '../contexts/CloudSyncContext'
 
 export default function Settings() {
   const [settings, setSettings] = useState<NotificationSettings>(getNotificationSettings())
@@ -38,6 +39,10 @@ export default function Settings() {
   const [gemini, setGemini] = useState<GeminiSettings>(getGeminiSettings())
   const [geminiMessage, setGeminiMessage] = useState('')
   const [testingGemini, setTestingGemini] = useState(false)
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [authMessage, setAuthMessage] = useState('')
+  const cloud = useCloudSync()
 
   useEffect(() => {
     void getSyncFolderName().then(setSyncFolder)
@@ -103,6 +108,19 @@ export default function Settings() {
     window.location.href = '/'
   }
 
+  async function handleAuth(mode: 'signin' | 'signup') {
+    if (!email.trim() || password.length < 6) {
+      setAuthMessage('请输入邮箱；密码至少 6 位')
+      return
+    }
+    setAuthMessage(mode === 'signin' ? '正在登录…' : '正在注册…')
+    const result = await (mode === 'signin'
+      ? cloud.signIn(email.trim(), password)
+      : cloud.signUp(email.trim(), password))
+    setPassword('')
+    setAuthMessage(result)
+  }
+
   async function handlePickFolder() {
     try {
       const name = await pickSyncFolder()
@@ -146,6 +164,96 @@ export default function Settings() {
           <p className="muted">插件、文件夹同步、外观</p>
         </div>
       </div>
+
+      <section className="panel cloud-sync-panel">
+        <div className="panel-head">
+          <h2>账号与云同步</h2>
+          <span className={`sync-status ${cloud.status === '已同步' ? 'success' : ''}`}>
+            {cloud.status}
+          </span>
+        </div>
+        {cloud.session ? (
+          <>
+            <p className="hint">
+              已登录：<strong>{cloud.session.user.email}</strong>。本地修改会自动保存到云端，换设备登录后自动恢复。
+            </p>
+            {(cloud.message || authMessage) && <p className="hint">{cloud.message || authMessage}</p>}
+            <div className="quick-actions">
+              {cloud.status === '需要选择' && (
+                <>
+                  <button
+                    className="btn primary"
+                    type="button"
+                    onClick={() => {
+                      if (confirm('用当前浏览器数据覆盖云端数据？')) void cloud.uploadLocal()
+                    }}
+                  >
+                    保留当前浏览器数据
+                  </button>
+                  <button
+                    className="btn ghost"
+                    type="button"
+                    onClick={() => {
+                      if (confirm('用云端数据覆盖当前浏览器数据？')) void cloud.restoreCloud()
+                    }}
+                  >
+                    使用云端数据
+                  </button>
+                </>
+              )}
+              <button className="btn ghost" type="button" onClick={() => void cloud.uploadLocal()}>
+                立即上传
+              </button>
+              <button
+                className="btn ghost"
+                type="button"
+                onClick={() => {
+                  if (confirm('从云端恢复会覆盖当前浏览器数据，确定继续？')) void cloud.restoreCloud()
+                }}
+              >
+                从云端恢复
+              </button>
+              <button className="btn danger" type="button" onClick={() => void cloud.signOut()}>
+                退出登录
+              </button>
+            </div>
+          </>
+        ) : (
+          <>
+            <p className="hint">登录后自动同步职位、进度、笔记和项目数据；首次注册会上传当前浏览器已有数据。</p>
+            <div className="form-grid">
+              <label className="field">
+                <span>邮箱</span>
+                <input
+                  type="email"
+                  value={email}
+                  autoComplete="email"
+                  onChange={(event) => setEmail(event.target.value)}
+                />
+              </label>
+              <label className="field">
+                <span>密码</span>
+                <input
+                  type="password"
+                  value={password}
+                  minLength={6}
+                  autoComplete="current-password"
+                  onChange={(event) => setPassword(event.target.value)}
+                />
+              </label>
+            </div>
+            <div className="quick-actions">
+              <button className="btn primary" type="button" onClick={() => void handleAuth('signin')}>
+                登录
+              </button>
+              <button className="btn ghost" type="button" onClick={() => void handleAuth('signup')}>
+                注册新账号
+              </button>
+            </div>
+            {authMessage && <p className="hint">{authMessage}</p>}
+          </>
+        )}
+      </section>
 
       <section className="panel">
         <h2>Boss 直聘浏览器插件（免费）</h2>

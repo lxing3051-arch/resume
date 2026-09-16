@@ -11,6 +11,7 @@ import Stats from './pages/Stats'
 import Resumes from './pages/Resumes'
 import Notes from './pages/Notes'
 import Settings from './pages/Settings'
+import { CloudSyncProvider } from './contexts/CloudSyncContext'
 
 function AppRoutes() {
   useNotificationScheduler()
@@ -39,9 +40,11 @@ function routerBasename(): string | undefined {
 export default function App() {
   return (
     <ErrorBoundary>
-      <BrowserRouter basename={routerBasename()}>
-        <AppRoutes />
-      </BrowserRouter>
+      <CloudSyncProvider>
+        <BrowserRouter basename={routerBasename()}>
+          <AppRoutes />
+        </BrowserRouter>
+      </CloudSyncProvider>
     </ErrorBoundary>
   )
 }
