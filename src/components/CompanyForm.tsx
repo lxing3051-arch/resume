@@ -131,7 +131,7 @@ export function CompanyForm({
   }
 
   return (
-    <div className="two-col">
+    <div className={showOcr ? 'two-col' : 'company-form-single'}>
       {showOcr && (
         <section className="panel">
           <h2>录入 JD</h2>

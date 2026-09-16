@@ -450,6 +450,15 @@ a {
   margin-bottom: 16px;
 }
 
+.company-form-single {
+  width: 100%;
+  margin-bottom: 16px;
+}
+
+.company-form-single > .panel {
+  width: 100%;
+}
+
 .panel {
   background: var(--surface);
   border-radius: 12px;
