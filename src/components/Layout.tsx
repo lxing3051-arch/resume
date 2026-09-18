@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom'
+import { Link, NavLink } from 'react-router-dom'
 import type { ApplicationStatus } from '../types'
 
 const statusColors: Record<ApplicationStatus, string> = {
@@ -19,24 +19,53 @@ export function StatusBadge({ status }: { status: ApplicationStatus }) {
 }
 
 export function Layout({ children }: { children: React.ReactNode }) {
+  const navItems = [
+    { to: '/', icon: '⌂', label: '投递看板', end: true },
+    { to: '/calendar', icon: '▣', label: '求职日历' },
+    { to: '/stats', icon: '≡', label: '数据分析' },
+    { to: '/resumes', icon: '▤', label: '简历管理' },
+    { to: '/projects', icon: '◈', label: '项目管理' },
+    { to: '/notes', icon: '◰', label: '面经笔记' },
+  ]
+
   return (
     <div className="app">
-      <header className="header">
+      <aside className="sidebar">
         <Link to="/" className="logo">
-          秋招助手
+          <span className="logo-mark" aria-hidden="true">🌱</span>
+          <span>秋招助手</span>
         </Link>
-        <nav>
-          <Link to="/">看板</Link>
-          <Link to="/calendar">日历</Link>
-          <Link to="/stats">数据</Link>
-          <Link to="/company/new">添加</Link>
-          <Link to="/resumes">简历</Link>
-          <Link to="/projects">项目</Link>
-          <Link to="/notes">面经</Link>
-          <Link to="/settings">设置</Link>
+        <nav className="side-nav" aria-label="主导航">
+          {navItems.slice(0, 3).map((item) => (
+            <NavLink key={item.to} to={item.to} end={item.end} className={({ isActive }) => isActive ? 'active' : ''}>
+              <span className="nav-icon" aria-hidden="true">{item.icon}</span>{item.label}
+            </NavLink>
+          ))}
+          <div className="nav-divider"><span>求职资料</span></div>
+          {navItems.slice(3).map((item) => (
+            <NavLink key={item.to} to={item.to} className={({ isActive }) => isActive ? 'active' : ''}>
+              <span className="nav-icon" aria-hidden="true">{item.icon}</span>{item.label}
+            </NavLink>
+          ))}
         </nav>
-      </header>
-      <main className="main">{children}</main>
+        <NavLink to="/settings" className={({ isActive }) => `side-settings${isActive ? ' active' : ''}`}>
+          <span className="nav-icon" aria-hidden="true">⚙</span>设置
+        </NavLink>
+      </aside>
+      <div className="app-body">
+        <header className="header">
+          <div className="topbar-search" aria-hidden="true">
+            <span>⌕</span><span>搜索公司、岗位、标签...</span>
+          </div>
+          <div className="topbar-actions">
+            <Link to="/company/new" className="btn primary topbar-add">＋ 新增投递</Link>
+            <span className="topbar-bell" aria-hidden="true">♢<i /></span>
+            <span className="user-avatar">LX</span>
+            <strong>李星</strong>
+          </div>
+        </header>
+        <main className="main">{children}</main>
+      </div>
     </div>
   )
 }

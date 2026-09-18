@@ -52,7 +52,7 @@ export default function Dashboard() {
       <div className="page-header">
         <div>
           <h1>{rejectedOnly ? '已拒记录' : '投递看板'}</h1>
-          <p className="muted">数据保存在本机浏览器，零服务器费用</p>
+          <p className="muted dashboard-subtitle">集中管理每一次投递，跟进求职进度</p>
         </div>
         <div className="header-actions">
           <button
@@ -77,21 +77,21 @@ export default function Dashboard() {
 
       {stats && (
         <div className="stats">
-          <div className="stat-card">
-            <span>总计</span>
-            <strong>{stats.total}</strong>
+          <div className="stat-card stat-total">
+            <span className="stat-icon">➤</span><div><span>总计</span>
+            <strong>{stats.total}</strong></div>
           </div>
-          <div className="stat-card">
-            <span>进行中</span>
-            <strong>{stats.active}</strong>
+          <div className="stat-card stat-active">
+            <span className="stat-icon">◉</span><div><span>进行中</span>
+            <strong>{stats.active}</strong></div>
           </div>
-          <div className="stat-card">
-            <span>面试中</span>
-            <strong>{stats.interview}</strong>
+          <div className="stat-card stat-interview">
+            <span className="stat-icon">♥</span><div><span>面试中</span>
+            <strong>{stats.interview}</strong></div>
           </div>
-          <div className="stat-card warn">
-            <span>临近截止</span>
-            <strong>{stats.urgent}</strong>
+          <div className="stat-card stat-urgent warn">
+            <span className="stat-icon">▤</span><div><span>临近截止</span>
+            <strong>{stats.urgent}</strong></div>
           </div>
         </div>
       )}
