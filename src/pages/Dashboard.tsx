@@ -1,5 +1,5 @@
 import { useLiveQuery } from 'dexie-react-hooks'
-import { useSearchParams } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { useMemo, useState } from 'react'
 import { Layout, EmptyState } from '../components/Layout'
 import { CompanyCard } from '../components/CompanyCard'
@@ -129,7 +129,7 @@ export default function Dashboard() {
         </select>
       </div>
 
-      {!companies?.length ? (
+      {!companies?.length && rejectedOnly ? (
         <EmptyState
           title={rejectedOnly ? '没有已拒记录' : '还没有公司记录'}
           hint={
@@ -138,6 +138,37 @@ export default function Dashboard() {
               : '上传 Boss 直聘截图，自动识别 JD 并跟踪进度'
           }
         />
+      ) : !companies?.length ? (
+        <div className="card-grid">
+          <Link to="/company/new" className="company-card company-card-template">
+            <div className="card-top">
+              <div className="card-company">
+                <span className="company-mark default">公司</span>
+                <div className="card-company-copy">
+                  <h3>公司名称</h3>
+                  <p>岗位名称</p>
+                </div>
+              </div>
+              <span className="card-phase-badge blue">待网申</span>
+            </div>
+            <div className="card-meta">
+              <span>秋招 · {new Date().getFullYear()}</span>
+              <span>暂无</span>
+            </div>
+            <div className="card-progress">
+              <div className="card-progress-head"><span>0/5</span></div>
+              <div className="card-stepper">
+                {['网申', '投递简历', '测评', '笔试', '面试'].map((label, index) => (
+                  <div key={label} className="card-step 未开始">
+                    <span className="card-step-dot">{index + 1}</span>
+                    <span>{label}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <span className="template-card-hint">＋ 点击添加第一家公司</span>
+          </Link>
+        </div>
       ) : (
         <div className="card-grid">
           {companies.map((company) => (

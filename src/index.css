@@ -393,6 +393,23 @@ a {
   box-shadow: 0 14px 32px rgba(39, 78, 130, .12);
 }
 
+.company-card-template {
+  display: block;
+  border-style: dashed;
+  border-color: #a9c5ea;
+  background: rgba(255, 255, 255, .7);
+}
+
+.company-card-template:hover { border-color: var(--primary); }
+
+.template-card-hint {
+  display: block;
+  margin-top: 9px;
+  color: var(--primary);
+  font-size: .75rem;
+  text-align: center;
+}
+
 .card-top {
   display: flex;
   align-items: flex-start;
