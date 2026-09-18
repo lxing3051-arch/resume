@@ -131,7 +131,6 @@ export default function Dashboard() {
 
       {!companies?.length ? (
         <EmptyState
-          compact
           title={rejectedOnly ? '没有已拒记录' : '还没有公司记录'}
           hint={
             rejectedOnly

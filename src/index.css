@@ -466,14 +466,13 @@ a {
 
 .card-progress-head {
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-end;
   gap: 8px;
-  margin-bottom: 6px;
+  height: 15px;
+  margin-bottom: 1px;
   color: var(--text-subtle);
-  font-size: 0.84rem;
+  font-size: 0.72rem;
 }
-
-.card-progress-head strong { color: var(--text); font-size: .78rem; }
 
 .card-stepper {
   display: grid;
@@ -958,38 +957,6 @@ a {
   background: var(--surface);
   border-radius: 12px;
 }
-
-.empty-tile {
-  width: min(100%, 300px);
-  min-height: 190px;
-  margin: 28px auto;
-  padding: 28px 24px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  border: 1px dashed #b9cbe3;
-  border-radius: 16px;
-  background: rgba(255, 255, 255, .78);
-  box-shadow: 0 8px 28px rgba(45, 78, 120, .06);
-}
-
-.empty-tile::before {
-  content: '+';
-  display: grid;
-  place-items: center;
-  width: 42px;
-  height: 42px;
-  margin-bottom: 14px;
-  border-radius: 12px;
-  background: #e8f2ff;
-  color: var(--primary);
-  font-size: 1.7rem;
-  line-height: 1;
-}
-
-.empty-tile h3 { margin: 0 0 7px; font-size: 1rem; }
-.empty-tile p { margin: 0; color: var(--text-muted); font-size: .82rem; line-height: 1.55; }
 
 .header-actions {
   display: flex;

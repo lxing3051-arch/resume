@@ -138,7 +138,6 @@ export function CompanyCard({ company }: Props) {
         </div>
         <div className="card-progress" aria-label={progressLabel(states)}>
           <div className="card-progress-head">
-            <strong>{progressLabel(states)}</strong>
             <span>{states.filter((state) => state === '已完成').length}/{PIPELINE.length}</span>
           </div>
           <div className="card-stepper">
