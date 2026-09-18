@@ -299,7 +299,7 @@ a {
   position: relative;
   background: var(--surface);
   border-radius: 14px;
-  padding: 20px;
+  padding: 14px 16px 12px;
   border: 1px solid rgba(219, 228, 241, .9);
   box-shadow: 0 8px 26px rgba(40, 70, 110, .06);
   transition: transform 0.15s ease, box-shadow 0.15s ease;
@@ -395,19 +395,57 @@ a {
 
 .card-top {
   display: flex;
+  align-items: flex-start;
   justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 12px;
+  gap: 10px;
+  margin-bottom: 8px;
 }
+
+.card-company {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  gap: 12px;
+}
+
+.card-company-copy { min-width: 0; }
+
+.company-mark {
+  display: grid;
+  place-items: center;
+  flex: 0 0 52px;
+  width: 52px;
+  height: 34px;
+  border-radius: 9px;
+  background: #edf4ff;
+  color: #246aca;
+  font-size: .72rem;
+  font-weight: 800;
+  font-style: italic;
+  letter-spacing: -.04em;
+}
+
+.company-mark.tencent { color: #0867df; background: transparent; }
+.company-mark.dji { color: #070707; background: transparent; font-size: 1rem; }
+.company-mark.shokz { color: #fff; background: #090909; font-size: .58rem; border-radius: 10px; }
+.company-mark.citic { color: #d71920; background: #fff3f3; border: 1px solid #f3b5b8; font-style: normal; }
+.company-mark.pdd { color: #fff; background: #e82b2f; font-style: normal; }
 
 .card-top h3,
 .company-card h3 {
-  margin: 0 0 4px;
+  margin: 0 0 2px;
+  font-size: 1rem;
+  line-height: 1.35;
 }
 
 .card-top p {
   margin: 0;
   color: var(--text-muted);
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: .86rem;
 }
 
 .card-meta,
@@ -416,13 +454,13 @@ a {
   flex-wrap: wrap;
   gap: 8px 12px;
   color: var(--text-muted);
-  font-size: 0.9rem;
-  margin-bottom: 12px;
+  font-size: 0.78rem;
+  margin-bottom: 7px;
 }
 
 .card-progress {
-  margin: 2px 0 12px;
-  padding: 10px 0 0;
+  margin: 0;
+  padding: 7px 0 0;
   border-top: 1px solid var(--border-light);
 }
 
@@ -430,12 +468,12 @@ a {
   display: flex;
   justify-content: space-between;
   gap: 8px;
-  margin-bottom: 9px;
+  margin-bottom: 6px;
   color: var(--text-subtle);
   font-size: 0.84rem;
 }
 
-.card-progress-head strong { color: var(--text); }
+.card-progress-head strong { color: var(--text); font-size: .78rem; }
 
 .card-stepper {
   display: grid;
@@ -447,7 +485,7 @@ a {
   position: relative;
   display: grid;
   justify-items: center;
-  gap: 4px;
+  gap: 2px;
   color: var(--text-muted);
   font-size: 0.68rem;
   text-align: center;
@@ -456,7 +494,7 @@ a {
 .card-step:not(:last-child)::after {
   content: '';
   position: absolute;
-  top: 10px;
+  top: 9px;
   left: calc(50% + 10px);
   width: calc(100% - 20px);
   height: 2px;
@@ -468,8 +506,8 @@ a {
   z-index: 1;
   display: grid;
   place-items: center;
-  width: 21px;
-  height: 21px;
+  width: 19px;
+  height: 19px;
   border-radius: 50%;
   background: var(--surface-muted);
   border: 1px solid var(--border);
@@ -495,9 +533,10 @@ a {
 }
 
 .card-phase-badge {
+  align-self: flex-start;
   flex: 0 0 auto;
-  max-width: 112px;
-  padding: 5px 9px;
+  max-width: 98px;
+  padding: 4px 9px;
   border-radius: 999px;
   background: rgb(37 99 235 / 12%);
   color: var(--primary);
@@ -506,6 +545,11 @@ a {
   line-height: 1.25;
   text-align: center;
 }
+.card-phase-badge.blue { background: #e7f2ff; color: #1473ef; }
+.card-phase-badge.purple, .card-phase-badge.violet { background: #f1e9ff; color: #7c3aed; }
+.card-phase-badge.orange { background: #fff0df; color: #f97316; }
+.card-phase-badge.green { background: #ddf8e8; color: #16a34a; }
+.card-phase-badge.red { background: #ffe5e7; color: #dc2626; }
 
 .tags {
   display: flex;

@@ -46,6 +46,25 @@ function phaseBadgeLabel(company: Company, states: ProgressState[]): string {
   return '流程完成'
 }
 
+function companyMark(name: string): { label: string; kind: string } {
+  const normalized = name.trim().toLowerCase()
+  if (normalized.includes('腾讯') || normalized.includes('tencent')) return { label: 'Tencent', kind: 'tencent' }
+  if (normalized.includes('大疆') || normalized.includes('dji')) return { label: 'DJI', kind: 'dji' }
+  if (normalized.includes('韶音') || normalized.includes('shokz')) return { label: 'SHOKZ', kind: 'shokz' }
+  if (normalized.includes('中信')) return { label: '中信', kind: 'citic' }
+  if (normalized.includes('拼多多')) return { label: '拼', kind: 'pdd' }
+  return { label: name.slice(0, 2) || '企', kind: 'default' }
+}
+
+function phaseTone(label: string): string {
+  if (label.includes('测评')) return 'purple'
+  if (label.includes('笔试')) return 'orange'
+  if (label.includes('面试')) return 'violet'
+  if (label.includes('完成') || label === '已OC') return 'green'
+  if (label === '已结束') return 'red'
+  return 'blue'
+}
+
 export function CompanyCard({ company }: Props) {
   const [menuOpen, setMenuOpen] = useState(false)
   const deadlineHint = daysUntil(company.deadline)
@@ -54,6 +73,8 @@ export function CompanyCard({ company }: Props) {
     [company.id],
   )
   const states = PIPELINE.map((phase) => phaseState(stages ?? [], phase.types))
+  const badgeLabel = phaseBadgeLabel(company, states)
+  const mark = companyMark(company.name || '')
 
   async function handleDelete(e: React.MouseEvent) {
     e.preventDefault()
@@ -99,11 +120,14 @@ export function CompanyCard({ company }: Props) {
 
       <Link to={`/company/${company.id}`} className="company-card-link">
         <div className="card-top">
-          <div>
-            <h3>{company.name || '未命名公司'}</h3>
-            <p>{company.position || '未填写岗位'}</p>
+          <div className="card-company">
+            <span className={`company-mark ${mark.kind}`}>{mark.label}</span>
+            <div className="card-company-copy">
+              <h3>{company.name || '未命名公司'}</h3>
+              <p>{company.position || '未填写岗位'}</p>
+            </div>
           </div>
-          <span className="card-phase-badge">{phaseBadgeLabel(company, states)}</span>
+          <span className={`card-phase-badge ${phaseTone(badgeLabel)}`}>{badgeLabel}</span>
         </div>
         <div className="card-meta">
           <span>
