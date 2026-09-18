@@ -1,11 +1,10 @@
 import { useLiveQuery } from 'dexie-react-hooks'
-import { Link, useSearchParams } from 'react-router-dom'
+import { useSearchParams } from 'react-router-dom'
 import { useMemo, useState } from 'react'
-import { Layout, EmptyState, daysUntil } from '../components/Layout'
+import { Layout, EmptyState } from '../components/Layout'
 import { CompanyCard } from '../components/CompanyCard'
 import { db } from '../db/database'
 import { getCompaniesFiltered } from '../utils/companyService'
-import { computeTodos } from '../utils/statsService'
 import type { ApplicationStatus, Season } from '../types'
 
 const STATUS_OPTIONS: (ApplicationStatus | '全部')[] = [
@@ -35,43 +34,21 @@ export default function Dashboard() {
   const totalCompanies = useLiveQuery(() => db.companies.count())
   const rejectedCompanies = useLiveQuery(() => getCompaniesFiltered({ rejectedOnly: true }))
 
-  const todos = useLiveQuery(() => computeTodos())
-
   const stats = useMemo(() => {
     if (!companies || totalCompanies === undefined) return null
     return {
       total: totalCompanies,
       active: companies.filter((c) => !['已OC', '已结束'].includes(c.status)).length,
       interview: companies.filter((c) => c.status === '面试中').length,
-      urgent: companies.filter((c) => daysUntil(c.deadline)).length,
+      rejected: rejectedCompanies?.length ?? 0,
     }
-  }, [companies, totalCompanies])
+  }, [companies, totalCompanies, rejectedCompanies])
 
   return (
     <Layout>
       <div className="page-header">
         <div>
           <h1>{rejectedOnly ? '已拒记录' : '投递看板'}</h1>
-          <p className="muted dashboard-subtitle">集中管理每一次投递，跟进求职进度</p>
-        </div>
-        <div className="header-actions">
-          <button
-            type="button"
-            className="btn ghost"
-            onClick={() => setSearchParams(rejectedOnly ? {} : { view: 'rejected' })}
-          >
-            {rejectedOnly ? '← 返回看板' : `查看已拒 (${rejectedCompanies?.length ?? 0})`}
-          </button>
-          {!rejectedOnly && (
-            <>
-              <Link to="/stats" className="btn ghost">
-                今日待办
-              </Link>
-              <Link to="/company/new" className="btn primary">
-                + 添加公司
-              </Link>
-            </>
-          )}
         </div>
       </div>
 
@@ -90,35 +67,34 @@ export default function Dashboard() {
             <strong>{stats.interview}</strong></div>
           </div>
           <div className="stat-card stat-urgent warn">
-            <span className="stat-icon">▤</span><div><span>临近截止</span>
-            <strong>{stats.urgent}</strong></div>
+            <span className="stat-icon">▤</span><div><span>已拒绝</span>
+            <strong>{stats.rejected}</strong></div>
           </div>
         </div>
       )}
 
-      {todos && todos.length > 0 && (
-        <section className="panel todo-preview">
-          <div className="panel-head">
-            <h2>今日待办 ({todos.length})</h2>
-            <Link to="/stats" className="muted small">
-              查看全部 →
-            </Link>
-          </div>
-          <div className="todo-list">
-            {todos.slice(0, 3).map((todo) => (
-              <Link key={todo.id} to={todo.link ?? '/'} className={`todo-item ${todo.priority}`}>
-                <span className="todo-type">
-                  {todo.type === 'apply' ? '待投递' : todo.type === 'deadline' ? '截止' : '安排'}
-                </span>
-                <div>
-                  <strong>{todo.title}</strong>
-                  <p className="muted small">{todo.subtitle}</p>
-                </div>
-              </Link>
-            ))}
-          </div>
-        </section>
-      )}
+      <div className="status-tabs" aria-label="按投递状态筛选">
+        {STATUS_OPTIONS.map((option) => (
+          <button
+            type="button"
+            key={option}
+            className={!rejectedOnly && status === option ? 'active' : ''}
+            onClick={() => {
+              setSearchParams({})
+              setStatus(option)
+            }}
+          >
+            {option}
+          </button>
+        ))}
+        <button
+          type="button"
+          className={rejectedOnly ? 'active rejected' : ''}
+          onClick={() => setSearchParams({ view: 'rejected' })}
+        >
+          已拒绝 ({rejectedCompanies?.length ?? 0})
+        </button>
+      </div>
 
       <div className="filters">
         <input
@@ -138,13 +114,6 @@ export default function Dashboard() {
           {[2025, 2026, 2027].map((y) => (
             <option key={y} value={y}>
               {y}
-            </option>
-          ))}
-        </select>
-        <select value={status} onChange={(e) => setStatus(e.target.value as ApplicationStatus | '全部')}>
-          {STATUS_OPTIONS.map((s) => (
-            <option key={s} value={s}>
-              {s}
             </option>
           ))}
         </select>

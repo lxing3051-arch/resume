@@ -233,13 +233,45 @@ a {
 
 .filters {
   display: grid;
-  grid-template-columns: 2fr 1fr 1fr 1fr;
+  grid-template-columns: minmax(240px, 1fr) 150px 150px;
   gap: 12px;
   margin-bottom: 20px;
-  padding: 10px;
-  border: 1px solid rgba(218, 228, 242, .8);
-  border-radius: 13px;
-  background: rgba(255,255,255,.76);
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+.status-tabs {
+  display: flex;
+  align-items: center;
+  width: fit-content;
+  max-width: 100%;
+  margin-bottom: 14px;
+  overflow-x: auto;
+  border: 1px solid #dce6f3;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, .86);
+  box-shadow: 0 4px 16px rgba(49, 80, 121, .04);
+}
+
+.status-tabs button {
+  flex: 0 0 auto;
+  min-height: 42px;
+  padding: 0 20px;
+  border: 0;
+  border-right: 1px solid #e5edf7;
+  background: transparent;
+  color: #405674;
+  font: inherit;
+  cursor: pointer;
+}
+
+.status-tabs button:last-child { border-right: 0; }
+.status-tabs button:hover { color: var(--primary); background: #f4f8ff; }
+.status-tabs button.active {
+  color: #fff;
+  background: #1473ef;
+  box-shadow: 0 5px 14px rgba(20, 115, 239, .22);
 }
 
 .filters input,
@@ -259,7 +291,7 @@ a {
 
 .card-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(330px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
   gap: 16px;
 }
 
