@@ -33,6 +33,16 @@ export default function Dashboard() {
   )
   const totalCompanies = useLiveQuery(() => db.companies.count())
   const rejectedCompanies = useLiveQuery(() => getCompaniesFiltered({ rejectedOnly: true }))
+  const activeCompanies = useLiveQuery(() => getCompaniesFiltered({}))
+
+  const statusCounts = useMemo(() => {
+    const counts = Object.fromEntries(
+      STATUS_OPTIONS.map((option) => [option, 0]),
+    ) as Record<(typeof STATUS_OPTIONS)[number], number>
+    counts.全部 = totalCompanies ?? 0
+    for (const company of activeCompanies ?? []) counts[company.status] += 1
+    return counts
+  }, [activeCompanies, totalCompanies])
 
   const stats = useMemo(() => {
     if (!companies || totalCompanies === undefined) return null
@@ -84,7 +94,7 @@ export default function Dashboard() {
               setStatus(option)
             }}
           >
-            {option}
+            {option} ({statusCounts[option]})
           </button>
         ))}
         <button
