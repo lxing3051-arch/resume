@@ -70,9 +70,9 @@ export function Layout({ children }: { children: React.ReactNode }) {
   )
 }
 
-export function EmptyState({ title, hint }: { title: string; hint: string }) {
+export function EmptyState({ title, hint, compact = false }: { title: string; hint: string; compact?: boolean }) {
   return (
-    <div className="empty">
+    <div className={`empty${compact ? ' empty-tile' : ''}`}>
       <h3>{title}</h3>
       <p>{hint}</p>
     </div>
